@@ -1,0 +1,215 @@
+{
+  "title": "Reports",
+  "subtitle": "Manage and track your training reports",
+  "createReport": "Create New Report",
+  "heading": "My Reports",
+  "newReport": "New Report",
+  "empty": "No reports yet",
+  "emptyDescription": "Create your first report draft to get started.",
+  "edit": "Edit",
+  "viewReport": "View Report",
+  "editReport": "Edit Report",
+  "reportNumberShort": "#{{number}}",
+  "formattedTitle": {
+    "weekly": "{{title}} - Week {{number}}",
+    "monthly": "{{title}} - Month {{number}}",
+    "final": "{{title}} - Final"
+  },
+  "periodLabels": {
+    "week": "Week {{number}}",
+    "month": "Month {{number}}",
+    "final": "Final"
+  },
+
+  "newReportTitle": "Create New Report",
+  "editReportTitle": "Edit Report",
+  "viewReportTitle": "Report Details",
+  "formSubtitle": "Fill in the details below and save as a draft.",
+  "readOnlyNotice": "This report has already been submitted and can no longer be edited.",
+
+  "reportTypeLabel": "Report Type",
+  "reportTypePlaceholder": "Select a report type",
+  "titleLabel": "Report Title",
+  "titlePlaceholder": "e.g. Week 1 Report",
+  "reportNumberLabel": "Number",
+  "contentLabel": "Report Content",
+  "contentPlaceholder": "Describe what you worked on...",
+  "dueAtLabel": "Due Date",
+  "dueDate": "Due Date",
+  "submissionDate": "Submission Date",
+  "grade": "Grade",
+  "feedback": "Feedback",
+  "overdue": "Overdue",
+  "attachFile": "Attach File",
+  "removeFile": "Remove file",
+  "maxFileSize": "Maximum file size is 10MB.",
+  "attachmentCount": "{{count}} attachment",
+  "attachmentCount_other": "{{count}} attachments",
+  "unsupportedFileType": "Unsupported file type. Allowed formats: PDF, DOC, DOCX, Images, ZIP.",
+  "attachmentHelp": "Max 10MB per file • PDF, Word, Images, ZIP",
+  "fileUploadError": "Failed to upload {{name}}. Please try again.",
+  "noActiveAssignmentNotice": "You do not have an active training placement. Creating reports requires an active assignment.",
+
+  "cancel": "Cancel",
+  "saving": "Saving...",
+  "submit": "Submit",
+  "submitCreate": "Save Draft",
+  "submitUpdate": "Save Changes",
+  "submitReport": "Submit Report",
+  "resubmitReport": "Resubmit Report",
+  "submitConfirmTitle": "Submit Report",
+  "resubmitConfirmTitle": "Resubmit Report",
+  "submitConfirmDescription": "Submitting this report will lock further edits until your academic supervisor reviews it. Are you sure you want to proceed?",
+  "resubmitConfirmDescription": "Resubmitting this report will lock further edits until your academic supervisor reviews your updates. Are you sure you want to proceed?",
+  "submitLockNotice": "Once submitted, this report will be locked and cannot be edited until your supervisor reviews it.",
+  "confirmSubmit": "Yes, Submit Report",
+  "confirmResubmit": "Yes, Resubmit Report",
+  "submitting": "Submitting...",
+  "resubmit": "Resubmit",
+  "supervisorFeedback": "Supervisor Feedback",
+  "revisionRequestedNotice": "Your academic supervisor requested revisions on this report. Please review the feedback above, make the necessary corrections, and resubmit.",
+
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "final": "Final",
+  "reportTypes": {
+    "daily": "Daily Report",
+    "weekly": "Weekly Report",
+    "monthly": "Monthly Report",
+    "final": "Final Report"
+  },
+
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "monthly": "Monthly",
+  "final": "Final",
+  "quotaLimitReached": "Quota reached",
+  "totalQuotaReachedNotice": "All required reports for this placement have been created",
+
+  "validation": {
+    "reportTypeRequired": "Please select a report type.",
+    "titleRequired": "Title is required.",
+    "titleMax": "Title cannot exceed 255 characters.",
+    "reportNumberInvalid": "Enter a valid report number (1 or higher).",
+    "dueAtRequired": "Due date is required.",
+    "contentRequired": "Content is required."
+  },
+
+  "toasts": {
+    "createdSuccess": "Report draft created.",
+    "updatedSuccess": "Report updated.",
+    "submittedSuccess": "Report submitted successfully."
+  },
+
+  "finalReportAlreadyCreated": "Already created",
+  "trainingCompletedDisabledHint": "Training is complete — no new reports can be created or submitted",
+  "trainingCompleted": {
+    "title": "Training Complete 🎓",
+    "description": "Your final report has been approved. Your training is complete and no further reports can be created or submitted."
+  },
+  "errors": {
+    "noActiveAssignment": "You need an active training placement to create a report.",
+    "duplicateReport": "A report of this type and number already exists for your placement.",
+    "duplicateFinalReport": "A final report already exists for your placement.",
+    "trainingCompleted": "Your training is complete (final report approved). No further reports can be created or submitted.",
+    "reportTypeNotAllowed": "This report type is not enabled for your training assignment.",
+    "reportQuotaExceeded": "You have reached the maximum allowed number of reports for this type or placement.",
+    "notEditable": "This report can no longer be edited.",
+    "notSubmittable": "This report cannot be submitted in its current status.",
+    "genericCreate": "Failed to create the report. Please try again.",
+    "genericUpdate": "Failed to update the report. Please try again.",
+    "genericSubmit": "Failed to submit the report. Please try again."
+  },
+
+  "status": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "under_review": "Under Review",
+    "reviewed": "Reviewed",
+    "approved": "Approved",
+    "revision_requested": "Revision Requested",
+    "rejected": "Rejected",
+    "overdue": "Overdue"
+  },
+
+  "all": "All",
+  "allTypes": "All Types",
+  "filterType": "Report Type",
+  "trainingProgram": "Training Program",
+  "trainingPeriod": "Training Period",
+  "noMatchingReports": "No reports match the selected filter.",
+
+  "supervisor": {
+    "title": "Training Reports Review",
+    "subtitle": "Review, evaluate, and track periodic student reports across your assigned training placements.",
+    "stats": {
+      "total": "Total Reports",
+      "pending": "Pending Review",
+      "approved": "Approved",
+      "revision": "Needs Revision"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by report title, student name, or ID...",
+      "allTypes": "All Types",
+      "allStatuses": "All Statuses",
+      "allCompanies": "All Companies",
+      "allOpportunities": "All Opportunities",
+      "typeLabel": "Report Type",
+      "statusLabel": "Status"
+    },
+    "card": {
+      "student": "Student",
+      "submittedAt": "Submitted on {{date}}",
+      "dueAt": "Due {{date}}",
+      "attachments": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments",
+      "viewReview": "View & Review",
+      "viewDetails": "View Details",
+      "previousFeedback": "Previous Supervisor Feedback",
+      "grade": "Grade: {{grade}}%"
+    },
+    "empty": {
+      "title": "No reports found",
+      "description": "No reports match your current search and filter criteria."
+    },
+    "dialog": {
+      "title": "Review Student Report",
+      "studentDetails": "Student Details",
+      "studentNumber": "Student ID",
+      "reportContent": "Report Content",
+      "attachments": "Attachments",
+      "download": "Download",
+      "view": "View",
+      "reviewSection": "Supervisor Evaluation & Decision",
+      "decisionLabel": "Review Decision",
+      "approve": "Approve",
+      "requestRevision": "Request Revision",
+      "reject": "Reject",
+      "gradeLabel": "Grade (0 - 100)",
+      "gradePlaceholder": "Enter grade (e.g. 90)",
+      "feedbackLabel": "Feedback & Notes",
+      "feedbackPlaceholderApprove": "Add constructive remarks and commendations for the student...",
+      "feedbackPlaceholderRevision": "Specify clearly what revisions and corrections the student must make before resubmitting...",
+      "feedbackPlaceholderReject": "State the explicit reasons why this report is rejected...",
+      "feedbackPlaceholderGeneric": "Enter your evaluation feedback here...",
+      "submitDecision": "Confirm Decision",
+      "submitting": "Submitting Evaluation...",
+      "close": "Close",
+      "historyTitle": "Review History",
+      "noHistory": "No previous reviews for this report."
+    },
+    "validation": {
+      "decisionRequired": "Please select an evaluation decision.",
+      "gradeRequired": "A grade is required when approving a report.",
+      "gradeMin": "Grade cannot be less than 0.",
+      "gradeMax": "Grade cannot exceed 100.",
+      "feedbackRequired": "Feedback is required.",
+      "feedbackRequiredReject": "A reason is required to reject a report.",
+      "feedbackRequiredRevision": "A reason is required to request revision on a report.",
+      "feedbackMax": "Feedback cannot exceed 2000 characters."
+    },
+    "toasts": {
+      "reviewedSuccess": "Report evaluated successfully."
+    }
+  }
+}

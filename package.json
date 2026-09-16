@@ -1,0 +1,38 @@
+{
+  "name": "training-ecosystem-platform",
+  "version": "1.0.0",
+  "description": "A cooperative-training management platform connecting universities, students, and companies — built as a white-label product for Yemeni universities.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "frontend/**/*.{ts,tsx}": [
+      "npx eslint --fix",
+      "npx prettier --write"
+    ],
+    "backend/**/*.php": [
+      "backend/vendor/bin/pint"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Third-Eye-Soft/Training-Ecosystem-Platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Third-Eye-Soft/Training-Ecosystem-Platform/issues"
+  },
+  "homepage": "https://github.com/Third-Eye-Soft/Training-Ecosystem-Platform#readme",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0"
+  }
+}

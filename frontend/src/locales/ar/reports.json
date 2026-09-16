@@ -1,0 +1,211 @@
+{
+  "title": "التقارير",
+  "subtitle": "إدارة وتتبع تقارير التدريب",
+  "createReport": "إنشاء تقرير جديد",
+  "heading": "تقاريري",
+  "newReport": "تقرير جديد",
+  "empty": "لا توجد تقارير بعد",
+  "emptyDescription": "أنشئ أول مسودة تقرير للبدء.",
+  "edit": "تعديل",
+  "viewReport": "عرض التقرير",
+  "editReport": "تعديل التقرير",
+  "reportNumberShort": "رقم {{number}}",
+  "formattedTitle": {
+    "weekly": "{{title}} - الأسبوع {{number}}",
+    "monthly": "{{title}} - الشهر {{number}}",
+    "final": "{{title}} - النهائي"
+  },
+  "periodLabels": {
+    "week": "الأسبوع {{number}}",
+    "month": "الشهر {{number}}",
+    "final": "النهائي"
+  },
+
+  "newReportTitle": "إنشاء تقرير جديد",
+  "editReportTitle": "تعديل التقرير",
+  "viewReportTitle": "تفاصيل التقرير",
+  "formSubtitle": "املأ التفاصيل أدناه واحفظها كمسودة.",
+  "readOnlyNotice": "تم إرسال هذا التقرير بالفعل ولم يعد بالإمكان تعديله.",
+
+  "reportTypeLabel": "نوع التقرير",
+  "reportTypePlaceholder": "اختر نوع التقرير",
+  "titleLabel": "عنوان التقرير",
+  "titlePlaceholder": "مثال: تقرير الأسبوع الأول",
+  "reportNumberLabel": "الرقم",
+  "contentLabel": "محتوى التقرير",
+  "contentPlaceholder": "صف ما قمت بالعمل عليه...",
+  "dueAtLabel": "تاريخ الاستحقاق",
+  "dueDate": "تاريخ الاستحقاق",
+  "submissionDate": "تاريخ الإرسال",
+  "grade": "الدرجة",
+  "feedback": "التعليقات",
+  "overdue": "متأخر",
+  "attachFile": "إرفاق ملف",
+  "removeFile": "إزالة الملف",
+  "maxFileSize": "الحد الأقصى لحجم الملف هو 10 ميجابايت.",
+  "attachmentCount": "{{count}} مرفق",
+  "unsupportedFileType": "نوع الملف غير مدعوم. الصيغ المسموحة: PDF, Word, صور, ZIP.",
+  "attachmentHelp": "الحد الأقصى 10 ميجابايت لكل ملف • PDF, Word, صور, ZIP",
+  "fileUploadError": "فشل رفع الملف {{name}}. الرجاء المحاولة مرة أخرى.",
+  "noActiveAssignmentNotice": "لا يوجد تدريب ميداني نشط مرتبط بحسابك حاليًا. يتطلب رفع التقارير وجود تعيين تدريبي نشط.",
+
+  "cancel": "إلغاء",
+  "saving": "جارٍ الحفظ...",
+  "submit": "إرسال",
+  "submitCreate": "حفظ كمسودة",
+  "submitUpdate": "حفظ التغييرات",
+  "submitReport": "إرسال التقرير",
+  "resubmitReport": "إعادة إرسال التقرير",
+  "submitConfirmTitle": "إرسال التقرير",
+  "resubmitConfirmTitle": "إعادة إرسال التقرير",
+  "submitConfirmDescription": "سيؤدي إرسال هذا التقرير إلى قفل التعديلات حتى تتم مراجعته من قبل المشرف الأكاديمي. هل أنت متأكد من رغبتك في الإرسال؟",
+  "resubmitConfirmDescription": "سيؤدي إعادة إرسال هذا التقرير إلى قفل التعديلات حتى تتم مراجعته مجددًا من قبل المشرف الأكاديمي. هل أنت متأكد من المتابعة؟",
+  "submitLockNotice": "بمجرد الإرسال، سيتم قفل التقرير ولن تتمكن من تعديله حتى يقوم المشرف الأكاديمي بمراجعته.",
+  "confirmSubmit": "نعم، إرسال التقرير",
+  "confirmResubmit": "نعم، إعادة إرسال التقرير",
+  "submitting": "جارٍ الإرسال...",
+  "resubmit": "إعادة إرسال",
+  "supervisorFeedback": "ملاحظات المشرف الأكاديمي",
+  "revisionRequestedNotice": "طلب المشرف الأكاديمي تعديلات على هذا التقرير. يرجى مراجعة الملاحظات أعلاه، وإجراء التعديلات المطلوبة، ثم إعادة الإرسال.",
+
+  "weekly": "أسبوعي",
+  "monthly": "شهري",
+  "final": "نهائي",
+  "reportTypes": {
+    "daily": "تقرير يومي",
+    "weekly": "تقرير أسبوعي",
+    "monthly": "تقرير شهري",
+    "final": "تقرير نهائي"
+  },
+
+  "daily": "يومي",
+  "quotaLimitReached": "تم استيفاء الحد الأقصى",
+  "totalQuotaReachedNotice": "تم إكمال جميع التقارير المطلوبة لهذا التدريب",
+
+  "validation": {
+    "reportTypeRequired": "الرجاء اختيار نوع التقرير.",
+    "titleRequired": "العنوان مطلوب.",
+    "titleMax": "العنوان يجب ألا يتجاوز 255 حرفاً.",
+    "reportNumberInvalid": "أدخل رقم تقرير صحيح (1 أو أعلى).",
+    "dueAtRequired": "تاريخ الاستحقاق مطلوب.",
+    "contentRequired": "المحتوى مطلوب."
+  },
+
+  "toasts": {
+    "createdSuccess": "تم إنشاء مسودة التقرير.",
+    "updatedSuccess": "تم تحديث التقرير.",
+    "submittedSuccess": "تم إرسال التقرير بنجاح."
+  },
+
+  "finalReportAlreadyCreated": "تم إنشاؤه مسبقاً",
+  "trainingCompletedDisabledHint": "اكتمل التدريب — لا يمكن إنشاء تقارير جديدة أو إرسالها",
+  "trainingCompleted": {
+    "title": "اكتمل التدريب بنجاح 🎓",
+    "description": "تم اعتماد تقريرك النهائي بنجاح. لقد انتهت فترة تدريبك ولا يمكن إنشاء تقارير جديدة أو إرسالها."
+  },
+  "errors": {
+    "noActiveAssignment": "يجب أن يكون لديك تدريب ميداني نشط لإنشاء تقرير.",
+    "duplicateReport": "يوجد بالفعل تقرير بهذا النوع والرقم لتدريبك الميداني.",
+    "duplicateFinalReport": "يوجد بالفعل تقرير نهائي لتدريبك الميداني.",
+    "trainingCompleted": "اكتمل تدريبك (تم اعتماد التقرير النهائي). لا يمكن إنشاء تقارير جديدة أو إرسالها.",
+    "reportTypeNotAllowed": "نوع التقرير هذا غير مفعل لتدريبك الميداني.",
+    "reportQuotaExceeded": "لقد وصلت إلى الحد الأقصى المسموح به من التقارير لهذا النوع أو التدريب.",
+    "notEditable": "لم يعد بالإمكان تعديل هذا التقرير.",
+    "notSubmittable": "لا يمكن إرسال هذا التقرير في حالته الحالية.",
+    "genericCreate": "فشل إنشاء التقرير. الرجاء المحاولة مرة أخرى.",
+    "genericUpdate": "فشل تحديث التقرير. الرجاء المحاولة مرة أخرى.",
+    "genericSubmit": "فشل إرسال التقرير. الرجاء المحاولة مرة أخرى."
+  },
+
+  "status": {
+    "draft": "مسودة",
+    "submitted": "مرسل",
+    "under_review": "قيد المراجعة",
+    "reviewed": "تمت المراجعة",
+    "approved": "موافق عليه",
+    "revision_requested": "مطلوب تعديل",
+    "rejected": "مرفوض",
+    "overdue": "متأخر"
+  },
+
+  "all": "الكل",
+  "allTypes": "جميع الأنواع",
+  "filterType": "نوع التقرير",
+  "trainingProgram": "برنامج التدريب",
+  "trainingPeriod": "فترة التدريب",
+  "noMatchingReports": "لا توجد تقارير مطابقة للتصفية المحددة.",
+
+  "supervisor": {
+    "title": "مراجعة تقارير التدريب",
+    "subtitle": "مراجعة وتقييم وتتبع تقارير الطلاب الدورية لفرص التدريب الميداني المسندة إليك.",
+    "stats": {
+      "total": "إجمالي التقارير",
+      "pending": "بانتظار المراجعة",
+      "approved": "معتمدة",
+      "revision": "تتطلب تعديلاً"
+    },
+    "filters": {
+      "searchPlaceholder": "البحث بعنوان التقرير، اسم الطالب، أو رقمه الأكاديمي...",
+      "allTypes": "جميع الأنواع",
+      "allStatuses": "جميع الحالات",
+      "allCompanies": "جميع الشركات",
+      "allOpportunities": "جميع الفرص التدريبية",
+      "typeLabel": "نوع التقرير",
+      "statusLabel": "الحالة"
+    },
+    "card": {
+      "student": "المتدرب",
+      "submittedAt": "أُرسل بتاريخ {{date}}",
+      "dueAt": "تاريخ الاستحقاق {{date}}",
+      "attachments": "{{count}} مرفق",
+      "attachments_other": "{{count}} مرفقات",
+      "viewReview": "عرض ومراجعة",
+      "viewDetails": "عرض التفاصيل",
+      "previousFeedback": "ملاحظات المشرف السابقة",
+      "grade": "الدرجة: {{grade}}%"
+    },
+    "empty": {
+      "title": "لا توجد تقارير مطابقة",
+      "description": "لم يتم العثور على تقارير تطابق خيارات البحث والتصفية المحددة."
+    },
+    "dialog": {
+      "title": "مراجعة تقرير المتدرب",
+      "studentDetails": "بيانات المتدرب",
+      "studentNumber": "الرقم الأكاديمي",
+      "reportContent": "محتوى التقرير",
+      "attachments": "المرفقات",
+      "download": "تنزيل",
+      "view": "عرض",
+      "reviewSection": "تقييم المشرف الأكاديمي وقراره",
+      "decisionLabel": "قرار التقييم",
+      "approve": "اعتماد التقرير",
+      "requestRevision": "طلب تعديل",
+      "reject": "رفض التقرير",
+      "gradeLabel": "الدرجة (من 0 إلى 100)",
+      "gradePlaceholder": "أدخل الدرجة (مثال: 90)",
+      "feedbackLabel": "الملاحظات والتعليمات",
+      "feedbackPlaceholderApprove": "أدخل ملاحظات توجيهية وإشادة بأداء المتدرب...",
+      "feedbackPlaceholderRevision": "وضّح التعديلات المطلوبة بدقة ليقوم الطالب بتعديلها وإعادة الإرسال...",
+      "feedbackPlaceholderReject": "وضّح سبب رفض التقرير والمعايير التي لم تُستوفَ...",
+      "feedbackPlaceholderGeneric": "أدخل ملاحظات التقييم هنا...",
+      "submitDecision": "تأكيد القرار",
+      "submitting": "جارٍ إرسال التقييم...",
+      "close": "إغلاق",
+      "historyTitle": "سجل المراجعات",
+      "noHistory": "لا توجد مراجعات سابقة لهذا التقرير."
+    },
+    "validation": {
+      "decisionRequired": "الرجاء اختيار قرار التقييم.",
+      "gradeRequired": "الدرجة مطلوبة عند اعتماد التقرير.",
+      "gradeMin": "لا يمكن أن تقل الدرجة عن 0.",
+      "gradeMax": "لا يمكن أن تتجاوز الدرجة 100.",
+      "feedbackRequired": "الملاحظات مطلوبة.",
+      "feedbackRequiredReject": "يجب إبداء سبب لرفض التقرير.",
+      "feedbackRequiredRevision": "يجب إبداء سبب لطلب تعديل التقرير.",
+      "feedbackMax": "لا يمكن أن تتجاوز الملاحظات 2000 حرف."
+    },
+    "toasts": {
+      "reviewedSuccess": "تم تقييم التقرير بنجاح."
+    }
+  }
+}

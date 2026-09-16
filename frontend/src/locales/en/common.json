@@ -1,0 +1,14 @@
+{
+  "appName": "Cooperative Training Platform",
+  "pageTitleSuffix": "Cooperative Training Platform",
+  "loading": "Loading...",
+  "toast": {
+    "welcomeBack": "Welcome back, {{name}}!",
+    "profileUpdated": "Profile updated successfully!",
+    "passwordUpdated": "Password updated successfully!",
+    "linkSent": "Reset link sent successfully!",
+    "verificationSent": "Verification email sent!",
+    "error": "Something went wrong. Please try again.",
+    "sessionExpired": "Your session has expired. Please log in again."
+  }
+}

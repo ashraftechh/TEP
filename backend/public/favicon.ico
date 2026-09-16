@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" fill="none">
+  <rect width="32" height="32" rx="8" fill="#003366"/>
+  <!-- Graduation Cap Icon matching Lucide GraduationCap in Logo component -->
+  <path d="M27.2 13.72a1 1 0 0 0-.02-1.84L16.8 7.2a2 2 0 0 0-1.6 0L4.82 11.88a1 1 0 0 0 0 1.84l10.38 4.68a2 2 0 0 0 1.6 0l10.4-4.68z" fill="#ffffff"/>
+  <path d="M28 13.5v6" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <path d="M9 16v3.5a7 3.5 0 0 0 14 0V16" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

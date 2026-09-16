@@ -1,0 +1,168 @@
+name: Training Ecosystem Platform CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+      - "fix/**"
+      - "refactor/**"
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - ".github/workflows/**"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check frontend exists
+        run: |
+          if [ ! -f frontend/package.json ]; then
+            echo "Frontend project not found. Skipping."
+            exit 0
+          fi
+        working-directory: .
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Format Check
+        run: npx prettier --check . --if-present
+
+      - name: Run Tests
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build --if-present
+
+  backend:
+    name: Backend (Laravel)
+    runs-on: ubuntu-latest
+
+    # MySQL service container — tests run against the same engine as
+    # production, not SQLite. The schema uses MySQL-specific behavior
+    # (JSON columns, ENUM types, ON DELETE RESTRICT semantics) that SQLite
+    # does not reproduce faithfully; a green SQLite run does not guarantee
+    # a green MySQL run.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: training_ecosystem_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check backend exists
+        run: |
+          if [ ! -f backend/composer.json ]; then
+            echo "Backend project not found. Skipping."
+            exit 0
+          fi
+        working-directory: .
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: mbstring, pdo_mysql, intl, zip, curl, dom, libxml
+          coverage: none
+
+      - name: Prepare Environment & Storage Directories
+        run: |
+          cp .env.example .env
+          mkdir -p storage/framework/{cache/data,sessions,testing,views} storage/logs storage/app/public bootstrap/cache
+          chmod -R 775 storage bootstrap/cache
+
+      - name: Cache Composer Dependencies
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            mysqladmin ping -h127.0.0.1 -P3306 -uroot -proot --silent && break
+            sleep 2
+          done
+
+      - name: Lint (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Static Analysis (PHPStan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress app tests
+
+      - name: Run Database Migrations
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: training_ecosystem_testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan migrate --force
+
+      - name: Run Tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: training_ecosystem_testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan test

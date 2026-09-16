@@ -1,0 +1,14 @@
+# Default owner
+* @Third-Eye-Soft/training-ecosystem-platform
+
+# Frontend
+/frontend/ @Third-Eye-Soft/training-ecosystem-platform
+
+# Backend
+/backend/ @Third-Eye-Soft/training-ecosystem-platform
+
+# Documentation
+/docs/ @Third-Eye-Soft/training-ecosystem-platform
+
+# GitHub configuration
+/.github/ @Third-Eye-Soft/training-ecosystem-platform

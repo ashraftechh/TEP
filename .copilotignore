@@ -1,0 +1,62 @@
+# ==================================================
+# 1. Backend Frameworks
+# ==================================================
+
+# --- Laravel / PHP ---
+**/vendor/
+**/storage/framework/cache/
+**/storage/framework/sessions/
+**/storage/framework/views/
+**/storage/logs/
+**/bootstrap/cache/
+**/.phpunit.cache/
+
+# --- Node.js / Express / NestJS ---
+**/node_modules/
+**/dist/
+**/coverage/
+**/.npm/
+
+# --- Django / Python / FastAPI ---
+**/venv/
+**/.venv/
+**/env/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/*.sqlite3
+
+# ==================================================
+# 2. Frontend & Mobile Frameworks
+# ==================================================
+
+# --- Vue.js / Nuxt / React / Next.js ---
+**/.next/
+**/.nuxt/
+**/.output/
+**/dist/
+**/build/
+**/.cache/
+
+# --- Flutter / Dart ---
+**/.dart_tool/
+**/.pub-cache/
+**/.pub/
+**/build/
+**/android/
+**/ios/
+
+# ==================================================
+# 3. General & Heavy Media Assets
+# ==================================================
+.git/
+.idea/
+.vscode/
+*.log
+*.zip
+*.tar.gz
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.mp4
+**/*.pdf

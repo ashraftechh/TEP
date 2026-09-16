@@ -1,0 +1,150 @@
+# ==========================
+# Environment files
+# ==========================
+.env
+.env.*
+!.env.example
+!.*/.env.example
+
+
+# ==========================
+# Node / React Frontend
+# ==========================
+node_modules/
+frontend/node_modules/
+
+dist/
+build/
+
+frontend/dist/
+frontend/build/
+
+.vite/
+frontend/.vite/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.eslintcache
+*.tsbuildinfo
+
+
+# ==========================
+# Laravel Backend
+# ==========================
+backend/vendor/
+
+backend/.env
+
+backend/storage/*.key
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/storage/framework/cache/*
+!backend/storage/framework/cache/.gitignore
+backend/storage/framework/cache/data/*
+!backend/storage/framework/cache/data/.gitignore
+backend/storage/framework/sessions/*
+!backend/storage/framework/sessions/.gitignore
+backend/storage/framework/testing/*
+!backend/storage/framework/testing/.gitignore
+backend/storage/framework/views/*
+!backend/storage/framework/views/.gitignore
+backend/storage/app/*
+!backend/storage/app/.gitignore
+!backend/storage/app/public/.gitignore
+!backend/storage/app/private/.gitignore
+
+backend/bootstrap/cache/*
+!backend/bootstrap/cache/.gitignore
+
+
+# ==========================
+# Composer
+# ==========================
+composer.phar
+backend/auth.json
+composer.auth.json
+
+
+# ==========================
+# Database
+# ==========================
+*.sqlite
+*.sqlite3
+*.db
+
+
+# ==========================
+# Docker
+# ==========================
+docker-compose.override.yml
+
+
+# ==========================
+# Testing
+# ==========================
+coverage/
+.phpunit.result.cache
+.phpunit.cache/
+
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+
+# ==========================
+# IDE
+# ==========================
+# .vscode/
+# .idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+
+# ==========================
+# Operating System
+# ==========================
+.DS_Store
+Thumbs.db
+
+
+# ==========================
+# Temporary files
+# ==========================
+*.tmp
+*.cache
+*.swp
+*.bak
+
+
+# ==========================
+# Documentation generated files
+# ==========================
+docs/.cache/
+
+
+# ==========================
+# GitHub Local Files
+# ==========================
+.github/*.local.yml
+
+
+# ==========================
+# PHP Tools
+# ==========================
+.php-cs-fixer.cache
+
+# .cursor/
+# .claude/
+# .codex/
+# .kiro/
+# .zed/
+# .pi/
+# .vscode/
+# opencode.json
+# AGENTS.md
+# CLAUDE.md

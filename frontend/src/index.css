@@ -1,0 +1,160 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * ─── Design Tokens ───────────────────────────────────────────────────────────
+ *
+ * University brand colors and semantic tokens for light & dark modes.
+ * TODO: Replace university-primary / secondary with exact university brand guidelines
+ *       once provided by the university identity team.
+ */
+
+:root {
+  /* University brand palette (Light) */
+  --color-university-primary: #1e40af;
+  --color-university-secondary: #1e3a8a;
+  --color-university-accent: #3b82f6;
+  --color-university-light: #dbeafe;
+
+  /* Semantic surface colors (Light) */
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-hover: #f1f5f9;
+
+  /* Border (Light) */
+  --color-border: #e2e8f0;
+  --color-border-input: #cbd5e1;
+
+  /* Text (Light) */
+  --color-foreground: #0f172a;
+  --color-foreground-muted: #64748b;
+
+  /* Destructive (Light) */
+  --color-destructive: #dc2626;
+  --color-destructive-light: #fef2f2;
+
+  /* Ring / focus */
+  --color-ring: #1e40af;
+}
+
+.dark {
+  /* University brand palette (Dark - appropriately contrasted) */
+  --color-university-primary: #3b82f6;
+  --color-university-secondary: #2563eb;
+  --color-university-accent: #60a5fa;
+  --color-university-light: #1e293b;
+
+  /* Semantic surface colors (Dark) */
+  --color-surface: #0f172a;
+  --color-surface-secondary: #0b0f19;
+  --color-surface-hover: #1e293b;
+
+  /* Border (Dark) */
+  --color-border: #1e293b;
+  --color-border-input: #334155;
+
+  /* Text (Dark) */
+  --color-foreground: #f8fafc;
+  --color-foreground-muted: #94a3b8;
+
+  /* Destructive (Dark) */
+  --color-destructive: #ef4444;
+  --color-destructive-light: #450a0a;
+
+  /* Ring / focus */
+  --color-ring: #3b82f6;
+}
+
+@theme {
+  --color-university-primary: var(--color-university-primary);
+  --color-university-secondary: var(--color-university-secondary);
+  --color-university-accent: var(--color-university-accent);
+  --color-university-light: var(--color-university-light);
+
+  --color-surface: var(--color-surface);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-hover: var(--color-surface-hover);
+
+  --color-border: var(--color-border);
+  --color-border-input: var(--color-border-input);
+
+  --color-foreground: var(--color-foreground);
+  --color-foreground-muted: var(--color-foreground-muted);
+
+  --color-destructive: var(--color-destructive);
+  --color-destructive-light: var(--color-destructive-light);
+
+  --color-ring: var(--color-ring);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --font-sans: 'Inter', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * ─── Base Resets ──────────────────────────────────────────────────────────────
+ */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-foreground);
+    background-color: var(--color-surface-secondary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  /* RTL support: when <html dir="rtl"> */
+  [dir='rtl'] {
+    direction: rtl;
+  }
+
+  /*
+   * Edge ignores dir="ltr" on <input type="date"> when an ancestor has
+   * dir="rtl". CSS direction + text-align override it in all Chromium
+   * browsers including Edge.
+   */
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'] {
+    direction: ltr !important;
+    text-align: left !important;
+  }
+
+  /* Prevent browser default light-blue autofill background on inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  textarea:-webkit-autofill:active,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus,
+  select:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset !important;
+    -webkit-text-fill-color: var(--color-foreground) !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}

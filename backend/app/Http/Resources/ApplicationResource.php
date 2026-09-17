@@ -35,6 +35,7 @@ class ApplicationResource extends JsonResource
             'withdrawn_reason' => $application->withdrawn_reason,
             'version' => $application->version,
             'created_at' => $application->created_at?->toISOString(),
+            'submitted_at' => $application->submitted_at?->toISOString(),
             'updated_at' => $application->updated_at?->toISOString(),
             'cv_file' => $this->when(
                 $application->relationLoaded('cvFile') && $application->cvFile,

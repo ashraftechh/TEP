@@ -29,8 +29,7 @@ class RecordAttendanceRequest extends FormRequest
             return false;
         }
 
-        return $assignment->company_id === $user->companyRepresentative?->company_id
-            || $assignment->field_supervisor_id === $user->id;
+        return $assignment->field_supervisor_id === $user->id;
     }
 
     /**

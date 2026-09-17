@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'decision_reason',
     'withdrawn_reason',
     'version',
+    'submitted_at',
 ])]
 class Application extends Model
 {
@@ -54,6 +55,7 @@ class Application extends Model
     {
         return [
             'interview_at' => 'datetime',
+            'submitted_at' => 'datetime',
             'version' => 'integer',
         ];
     }

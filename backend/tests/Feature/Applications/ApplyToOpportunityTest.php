@@ -117,7 +117,7 @@ class ApplyToOpportunityTest extends TestCase
             'fileable_id' => $uploader->id,
             'purpose' => 'cv',
             'disk' => 'public',
-            'path' => 'cvs/sample_cv_'.fake()->uuid().'.pdf',
+            'path' => 'cvs/sample_cv_' . fake()->uuid() . '.pdf',
             'original_name' => 'my_resume.pdf',
             'mime_type' => 'application/pdf',
             'size_bytes' => 1024 * 300,
@@ -381,6 +381,12 @@ class ApplyToOpportunityTest extends TestCase
             'withdrawn_reason' => 'Schedule conflict',
             'version' => 2,
         ]);
+        // Simulate the original submission having happened weeks ago —
+        // created_at is never touched by the reapply path (the row is
+        // reused via update(), not recreated).
+        $priorApp->created_at = now()->subWeeks(3);
+        $priorApp->submitted_at = now()->subWeeks(3);
+        $priorApp->save();
 
         // Re-applying
         $response = $this->actingAs($studentUser)
@@ -393,6 +399,13 @@ class ApplyToOpportunityTest extends TestCase
         // or updated. If updating existing row or creating second row, we verify 201 response.
         $response->assertStatus(201)
             ->assertJsonPath('data.status', 'submitted');
+
+        // The reused row's created_at stays untouched (still weeks old), but
+        // submitted_at must be refreshed — this is what list ordering and
+        // the "applied on" display rely on to reflect the actual reapply.
+        $priorApp->refresh();
+        $this->assertTrue($priorApp->created_at->lt(now()->subDays(1)));
+        $this->assertTrue($priorApp->submitted_at->gt(now()->subMinute()));
     }
 
     public function test_applying_when_max_active_applications_cap_reached_is_rejected(): void

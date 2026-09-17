@@ -85,7 +85,7 @@ class ApplicationController extends Controller
         }
 
         $applications = $query
-            ->orderByDesc('created_at')
+            ->orderByDesc('submitted_at')
             ->paginate((int) $request->input('per_page', 15));
 
         return ApplicationResource::collection($applications);
@@ -136,6 +136,7 @@ class ApplicationController extends Controller
                     'decision_reason' => null,
                     'withdrawn_reason' => null,
                     'interview_at' => null,
+                    'submitted_at' => now(),
                 ]);
 
                 return $this->recordTransitionAction->execute(
@@ -154,6 +155,7 @@ class ApplicationController extends Controller
                 'cover_note' => $request->filled('cover_note') ? (string) $request->input('cover_note') : null,
                 'status' => 'submitted',
                 'version' => 0,
+                'submitted_at' => now(),
             ]);
 
             // Record initial transition (from_status = null, to_status = 'submitted')
@@ -598,7 +600,7 @@ class ApplicationController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        $sortBy = $request->input('sort_by', 'created_at');
+        $sortBy = $request->input('sort_by', 'submitted_at');
         $sortDir = $request->input('sort_dir', 'desc');
         $query->orderBy($sortBy, $sortDir);
 

@@ -29,7 +29,7 @@ return [
         'application' => 'طلب مقبول',
         'academic_supervisor' => 'المشرف الأكاديمي',
         'field_supervisor' => 'المشرف الميداني',
-        'field_supervisor_hint' => 'اختياري — اختر طلبًا مقبولًا أولاً؛ سيتم عرض ممثلي شركة الفرصة التدريبية فقط.',
+        'field_supervisor_hint' => 'اختر طلبًا مقبولًا أولاً؛ سيتم عرض ممثلي شركة الفرصة التدريبية فقط.',
         'start_date' => 'تاريخ البدء',
         'end_date' => 'تاريخ الانتهاء',
         'required_reports_count' => 'إجمالي التقارير المطلوبة',

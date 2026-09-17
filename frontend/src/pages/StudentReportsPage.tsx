@@ -104,6 +104,67 @@ function serverAttachmentToEntry(a: ReportAttachment): UploadedFile {
   };
 }
 
+const FEEDBACK_CLAMP_THRESHOLD = 240;
+
+function FeedbackNote({
+  text,
+  variant,
+  label,
+}: {
+  text: string;
+  variant: 'revision' | 'rejected' | 'default';
+  label: string;
+}) {
+  const { t } = useTranslation('reports');
+  const [expanded, setExpanded] = useState(false);
+
+  const colorClasses =
+    variant === 'revision'
+      ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200'
+      : variant === 'rejected'
+        ? 'bg-red-50/90 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 text-red-900 dark:text-red-200'
+        : 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-100 dark:border-blue-900/50 text-gray-700 dark:text-blue-200';
+
+  const linkClasses =
+    variant === 'revision'
+      ? 'text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100'
+      : variant === 'rejected'
+        ? 'text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100'
+        : 'text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100';
+
+  const isLong = text.length > FEEDBACK_CLAMP_THRESHOLD;
+
+  return (
+    <div className={cn('p-3.5 rounded-lg border text-xs md:text-sm', colorClasses)}>
+      <div className="flex items-center gap-1.5 font-semibold mb-1">
+        {variant === 'revision' ? (
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+        ) : variant === 'rejected' ? (
+          <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+        ) : (
+          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+        )}
+        <span>{label}:</span>
+      </div>
+      <p className={cn('whitespace-pre-wrap', !expanded && isLong && 'line-clamp-4')}>{text}</p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className={cn(
+            'mt-1.5 text-xs font-semibold underline underline-offset-2 cursor-pointer',
+            linkClasses
+          )}
+        >
+          {expanded
+            ? t('showLess', { defaultValue: 'Show less' })
+            : t('showMore', { defaultValue: 'Show more' })}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const StudentReportsPage: React.FC = () => {
@@ -495,12 +556,16 @@ export const StudentReportsPage: React.FC = () => {
       if (!typeId) return '1';
       const type = reportTypes.find((t) => String(t.id) === String(typeId));
       if (type?.code === 'final') return '1';
-      const matching = reports.filter((r) => String(r.report_type_id) === String(typeId));
-      const maxNum = matching.reduce(
-        (max, r) => (r.report_number > max ? r.report_number : max),
-        0
-      );
-      return String(maxNum + 1);
+       const takenNumbers = new Set(
+        reports
+          .filter((r) => String(r.report_type_id) === String(typeId) && r.status !== 'rejected')
+          .map((r) => r.report_number)
+       );
+      let candidate = 1;
+      while (takenNumbers.has(candidate)) {
+        candidate += 1;
+      }
+      return String(candidate);
     },
     [reports, reportTypes]
   );
@@ -997,8 +1062,14 @@ export const StudentReportsPage: React.FC = () => {
         {visibleReports.map((report) => {
           const isOverdue =
             !report.submitted_at && Boolean(report.due_at) && new Date(report.due_at!) < new Date();
-          const isEditable = report.status === 'draft' || report.status === 'revision_requested';
-          const isSubmittable = report.status === 'draft' || report.status === 'revision_requested';
+          const isEditable =
+            report.status === 'draft' ||
+            report.status === 'revision_requested' ||
+            report.status === 'rejected';
+          const isSubmittable =
+            report.status === 'draft' ||
+            report.status === 'revision_requested' ||
+            report.status === 'rejected';
           const feedbackText = report.latest_review?.feedback || report.feedback;
           const typeName =
             getLocalizedName(report.report_type) ||
@@ -1077,29 +1148,23 @@ export const StudentReportsPage: React.FC = () => {
                     </div>
 
                     {Boolean(feedbackText) && (
-                      <div
-                        className={cn(
-                          'p-3.5 rounded-lg border text-xs md:text-sm',
+                      <FeedbackNote
+                        text={feedbackText}
+                        variant={
                           report.status === 'revision_requested'
-                            ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200'
-                            : 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-100 dark:border-blue-900/50 text-gray-700 dark:text-blue-200'
-                        )}
-                      >
-                        <div className="flex items-center gap-1.5 font-semibold mb-1">
-                          {report.status === 'revision_requested' ? (
-                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                          ) : (
-                            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                          )}
-                          <span>
-                            {report.status === 'revision_requested'
-                              ? t('supervisorFeedback')
-                              : t('feedback')}
-                            :
-                          </span>
-                        </div>
-                        <p className="whitespace-pre-wrap">{feedbackText}</p>
-                      </div>
+                            ? 'revision'
+                            : report.status === 'rejected'
+                              ? 'rejected'
+                              : 'default'
+                        }
+                        label={
+                          report.status === 'revision_requested'
+                            ? t('supervisorFeedback')
+                            : report.status === 'rejected'
+                              ? t('rejectionReason')
+                              : t('feedback')
+                        }
+                      />
                     )}
                   </div>
 
@@ -1143,7 +1208,9 @@ export const StudentReportsPage: React.FC = () => {
                         className="text-sm font-medium px-3.5 py-1.5 h-9 rounded-lg bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Send className="h-4 w-4 me-1.5" />
-                        {report.status === 'revision_requested' ? t('resubmit') : t('submit')}
+                        {report.status === 'revision_requested' || report.status === 'rejected'
+                          ? t('resubmit')
+                          : t('submit')}
                       </Button>
                     )}
                   </div>
@@ -1165,7 +1232,7 @@ export const StudentReportsPage: React.FC = () => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 pt-2">
-            {/* Prominent Supervisor Feedback Banner on Revision Requested */}
+            {/* Prominent Supervisor Feedback Banner on Revision Requested / Rejected */}
             {editingReport?.status === 'revision_requested' &&
               Boolean(editingReport.latest_review?.feedback || editingReport.feedback) && (
                 <div className="p-4 bg-amber-50 dark:bg-amber-950/40 rounded-lg border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 space-y-1.5">
@@ -1173,11 +1240,26 @@ export const StudentReportsPage: React.FC = () => {
                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
                     <span>{t('supervisorFeedback')}</span>
                   </div>
-                  <p className="text-xs md:text-sm whitespace-pre-wrap text-amber-950 dark:text-amber-100 bg-white/70 dark:bg-black/30 p-2.5 rounded border border-amber-200/60 dark:border-amber-900/40">
+                  <p className="text-xs md:text-sm whitespace-pre-wrap text-amber-950 dark:text-amber-100 bg-white/70 dark:bg-black/30 p-2.5 rounded border border-amber-200/60 dark:border-amber-900/40 max-h-40 overflow-y-auto">
                     {editingReport.latest_review?.feedback || editingReport.feedback}
                   </p>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300">
                     {t('revisionRequestedNotice')}
+                  </p>
+                </div>
+              )}
+            {editingReport?.status === 'rejected' &&
+              Boolean(editingReport.latest_review?.feedback || editingReport.feedback) && (
+                <div className="p-4 bg-red-50 dark:bg-red-950/40 rounded-lg border border-red-200 dark:border-red-800/60 text-red-900 dark:text-red-200 space-y-1.5">
+                  <div className="flex items-center gap-2 font-semibold text-sm">
+                    <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+                    <span>{t('rejectionReason')}</span>
+                  </div>
+                  <p className="text-xs md:text-sm whitespace-pre-wrap text-red-950 dark:text-red-100 bg-white/70 dark:bg-black/30 p-2.5 rounded border border-red-200/60 dark:border-red-900/40 max-h-40 overflow-y-auto">
+                    {editingReport.latest_review?.feedback || editingReport.feedback}
+                  </p>
+                  <p className="text-[11px] text-red-700 dark:text-red-300">
+                    {t('rejectedNotice')}
                   </p>
                 </div>
               )}
@@ -1426,7 +1508,8 @@ export const StudentReportsPage: React.FC = () => {
               <div>
                 {editingReport &&
                   (editingReport.status === 'draft' ||
-                    editingReport.status === 'revision_requested') && (
+                    editingReport.status === 'revision_requested' ||
+                    editingReport.status === 'rejected') && (
                     <Button
                       type="button"
                       size="sm"
@@ -1435,7 +1518,8 @@ export const StudentReportsPage: React.FC = () => {
                       className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer rounded-lg px-4 w-full sm:w-auto"
                     >
                       <Send className="h-4 w-4" />
-                      {editingReport.status === 'revision_requested'
+                      {editingReport.status === 'revision_requested' ||
+                      editingReport.status === 'rejected'
                         ? t('resubmitReport')
                         : t('submitReport')}
                     </Button>
@@ -1560,48 +1644,30 @@ export const StudentReportsPage: React.FC = () => {
               )}
 
               {Boolean(selectedReport.latest_review?.feedback || selectedReport.feedback) && (
-                <div
-                  className={cn(
-                    'p-4 rounded-lg border',
+                <FeedbackNote
+                  text={selectedReport.latest_review?.feedback || selectedReport.feedback || ''}
+                  variant={
                     selectedReport.status === 'revision_requested'
-                      ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60'
-                      : 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900'
-                  )}
-                >
-                  <h4
-                    className={cn(
-                      'font-semibold text-sm mb-1 flex items-center gap-1.5',
-                      selectedReport.status === 'revision_requested'
-                        ? 'text-amber-950 dark:text-amber-200'
-                        : 'text-blue-950 dark:text-blue-200'
-                    )}
-                  >
-                    {selectedReport.status === 'revision_requested' ? (
-                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    ) : (
-                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    )}
-                    {selectedReport.status === 'revision_requested'
+                      ? 'revision'
+                      : selectedReport.status === 'rejected'
+                        ? 'rejected'
+                        : 'default'
+                  }
+                  label={
+                    selectedReport.status === 'revision_requested'
                       ? t('supervisorFeedback')
-                      : t('feedback')}
-                  </h4>
-                  <p
-                    className={cn(
-                      'text-sm whitespace-pre-wrap',
-                      selectedReport.status === 'revision_requested'
-                        ? 'text-amber-900 dark:text-amber-300'
-                        : 'text-blue-900 dark:text-blue-300'
-                    )}
-                  >
-                    {selectedReport.latest_review?.feedback || selectedReport.feedback}
-                  </p>
-                </div>
+                      : selectedReport.status === 'rejected'
+                        ? t('rejectionReason')
+                        : t('feedback')
+                  }
+                />
               )}
 
               <div className="flex items-center justify-between pt-2">
                 <div>
                   {(selectedReport.status === 'draft' ||
-                    selectedReport.status === 'revision_requested') && (
+                    selectedReport.status === 'revision_requested' ||
+                    selectedReport.status === 'rejected') && (
                     <Button
                       size="sm"
                       disabled={isTrainingCompleted}
@@ -1616,7 +1682,8 @@ export const StudentReportsPage: React.FC = () => {
                       className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="h-4 w-4" />
-                      {selectedReport.status === 'revision_requested'
+                      {selectedReport.status === 'revision_requested' ||
+                      selectedReport.status === 'rejected'
                         ? t('resubmitReport')
                         : t('submitReport')}
                     </Button>
@@ -1637,12 +1704,12 @@ export const StudentReportsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Send className="h-5 w-5 text-[#5B50D6]" />
-              {reportToSubmit?.status === 'revision_requested'
+              {reportToSubmit?.status === 'revision_requested' || reportToSubmit?.status === 'rejected'
                 ? t('resubmitConfirmTitle')
                 : t('submitConfirmTitle')}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground pt-1">
-              {reportToSubmit?.status === 'revision_requested'
+              {reportToSubmit?.status === 'revision_requested' || reportToSubmit?.status === 'rejected'
                 ? t('resubmitConfirmDescription')
                 : t('submitConfirmDescription')}
             </DialogDescription>
@@ -1675,7 +1742,7 @@ export const StudentReportsPage: React.FC = () => {
               className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer rounded-lg px-4"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {reportToSubmit?.status === 'revision_requested'
+              {reportToSubmit?.status === 'revision_requested' || reportToSubmit?.status === 'rejected'
                 ? t('confirmResubmit')
                 : t('confirmSubmit')}
             </Button>

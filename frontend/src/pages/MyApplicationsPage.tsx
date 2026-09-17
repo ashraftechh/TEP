@@ -94,7 +94,7 @@ const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const isRemote = application.opportunity?.is_remote;
 
   // Date formatting: use ar-YE for Arabic (this is a Yemeni university, not ar-SA)
-  const appliedDate = new Date(application.created_at).toLocaleDateString(
+  const appliedDate = new Date(application.submitted_at).toLocaleDateString(
     language === 'ar' ? 'ar-YE' : 'en-GB',
     { year: 'numeric', month: 'short', day: 'numeric' }
   );

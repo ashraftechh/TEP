@@ -66,6 +66,7 @@ export interface ApplicationItem {
   withdrawn_reason: string | null;
   version: number;
   created_at: string;
+  submitted_at: string;
   updated_at: string;
   cv_file?: ApplicationCvFile | null;
   transitions?: ApplicationTransitionItem[];
@@ -117,7 +118,7 @@ export interface DecisionErrorResponse {
 export interface CompanyApplicationsParams {
   opportunity_id?: number | string;
   status?: string;
-  sort_by?: 'created_at' | 'status';
+  sort_by?: 'created_at' | 'submitted_at' | 'status';
   sort_dir?: 'asc' | 'desc';
   page?: number;
   per_page?: number;

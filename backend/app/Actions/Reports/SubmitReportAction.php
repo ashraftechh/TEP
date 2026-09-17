@@ -12,12 +12,17 @@ use Illuminate\Support\Facades\DB;
 /**
  * TEP-678 — Submit Report (POST /api/v1/reports/{report}/submit).
  *
- * Transitions a report from 'draft' (or 'revision_requested') to 'submitted',
- * recording submitted_at = now() and incrementing the optimistic version counter.
+ * Transitions a report from 'draft', 'revision_requested', or 'rejected'
+ * to 'submitted', recording submitted_at = now() and incrementing the
+ * optimistic version counter.
  *
- * FLAGGED / scope note: Resubmission after 'revision_requested' intentionally
- * reuses this same action and endpoint rather than introducing a separate
- * duplicate "resubmit" endpoint, as flagged in the TEP-678 specification.
+ * FLAGGED / scope note: Resubmission after 'revision_requested' or
+ * 'rejected' intentionally reuses this same action and endpoint rather
+ * than introducing a separate duplicate "resubmit" endpoint, as flagged
+ * in the TEP-678 specification. A rejected report is resubmittable for
+ * the same reason it's editable (see UpdateReportAction) — the decision
+ * between "rejected" and "revision_requested" is a signal to the student
+ * about severity, not a difference in what they're allowed to do next.
  */
 class SubmitReportAction
 {
@@ -26,7 +31,7 @@ class SubmitReportAction
      *
      * @var list<string>
      */
-    public const SUBMITTABLE_STATUSES = ['draft', 'revision_requested'];
+    public const SUBMITTABLE_STATUSES = ['draft', 'revision_requested', 'rejected'];
 
     public function execute(Report $report): Report
     {

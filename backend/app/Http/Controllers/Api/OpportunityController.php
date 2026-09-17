@@ -47,7 +47,7 @@ class OpportunityController extends Controller
             'requirements',
             'benefits',
         ])->withCount([
-            'applications as applicants_count',
+            'applications as applicants_count' => fn($q) => $q->whereNotIn('status', ['withdrawn', 'rejected']),
             'applications as accepted_applications_count' => fn($q) => $q->where('status', 'accepted'),
         ]);
 
@@ -219,7 +219,7 @@ class OpportunityController extends Controller
         ]);
 
         $opportunity->loadCount([
-            'applications as applicants_count',
+            'applications as applicants_count' => fn($q) => $q->whereNotIn('status', ['withdrawn', 'rejected']),
             'applications as accepted_applications_count' => fn($q) => $q->where('status', 'accepted'),
         ]);
 

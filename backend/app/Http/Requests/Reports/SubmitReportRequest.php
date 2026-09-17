@@ -13,9 +13,10 @@ use Illuminate\Foundation\Http\FormRequest;
  *
  * Permission `reports.own.submit` (student), plus an explicit ownership
  * check that the report's training assignment belongs to the
- * authenticated student. The status guard (422 if not draft or revision_requested)
- * is enforced in SubmitReportAction, not here, since that is a business-state
- * rule rather than an authorization rule.
+ * authenticated student. The status guard (422 if not draft,
+ * revision_requested, or rejected) is enforced in SubmitReportAction,
+ * not here, since that is a business-state rule rather than an
+ * authorization rule.
  */
 class SubmitReportRequest extends FormRequest
 {

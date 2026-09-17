@@ -280,7 +280,14 @@ class SubmitReportTest extends TestCase
             ->assertJsonPath('error_code', 'report_not_submittable');
     }
 
-    public function test_submitting_rejected_report_returns_422(): void
+    /**
+     * Behavior intentionally changed: a rejected report can now be
+     * resubmitted directly, the same as revision_requested — rejected and
+     * revision_requested differ only in severity signal to the student,
+     * not in what they're allowed to do next (see UpdateReportAction /
+     * SubmitReportAction doc comments).
+     */
+    public function test_submitting_rejected_report_succeeds(): void
     {
         [$assignment, $studentUser] = $this->makeAssignment();
         $report = $this->makeReport($assignment, status: 'rejected');
@@ -288,8 +295,8 @@ class SubmitReportTest extends TestCase
         $response = $this->actingAs($studentUser, 'sanctum')
             ->postJson("/api/v1/reports/{$report->id}/submit");
 
-        $response->assertStatus(422)
-            ->assertJsonPath('error_code', 'report_not_submittable');
+        $response->assertOk()
+            ->assertJsonPath('data.status', 'submitted');
     }
 
     public function test_submitting_under_review_report_returns_422(): void

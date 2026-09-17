@@ -240,6 +240,30 @@ class UpdateReportTest extends TestCase
         ]);
     }
 
+    /**
+     * Behavior intentionally changed: a rejected report can now be edited
+     * in place and resubmitted, the same as revision_requested, instead of
+     * requiring a brand-new report to be created (see UpdateReportAction
+     * doc comment).
+     */
+    public function test_student_can_edit_a_rejected_report(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $report = $this->makeReport($assignment, status: 'rejected');
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->patchJson("/api/v1/reports/{$report->id}", [
+                'title' => 'Week 1 Report (corrected)',
+                'content' => 'Corrected content addressing the rejection feedback.',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.title', 'Week 1 Report (corrected)')
+            ->assertJsonPath('data.content', 'Corrected content addressing the rejection feedback.')
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.version', 1);
+    }
+
     public function test_editing_a_submitted_report_returns_422(): void
     {
         [$assignment, $studentUser] = $this->makeAssignment();

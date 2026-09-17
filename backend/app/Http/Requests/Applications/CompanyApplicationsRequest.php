@@ -54,7 +54,7 @@ class CompanyApplicationsRequest extends FormRequest
                 'string',
                 'in:submitted,under_review,interview_scheduled,accepted,rejected,withdrawn',
             ],
-            'sort_by' => ['nullable', 'string', 'in:created_at,status'],
+            'sort_by' => ['nullable', 'string', 'in:created_at,submitted_at,status'],
             'sort_dir' => ['nullable', 'string', 'in:asc,desc'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];

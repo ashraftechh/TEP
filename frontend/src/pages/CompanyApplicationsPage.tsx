@@ -147,7 +147,7 @@ const ApplicationRow: React.FC<ApplicationRowProps> = ({
   const majorName = resolveTitle(profile?.major?.name, language);
   const opportunityTitle = resolveTitle(application.opportunity?.title, language);
 
-  const appliedDate = new Date(application.created_at).toLocaleDateString(
+  const appliedDate = new Date(application.submitted_at).toLocaleDateString(
     language === 'ar' ? 'ar-SA' : 'en-GB',
     { year: 'numeric', month: 'short', day: 'numeric' }
   );
@@ -427,7 +427,7 @@ const ViewApplicationDialog: React.FC<ViewApplicationDialogProps> = ({
   const profile = application.student_profile;
   const majorName = resolveTitle(profile?.major?.name, language);
   const opportunityTitle = resolveTitle(application.opportunity?.title, language);
-  const appliedDate = new Date(application.created_at).toLocaleDateString(
+  const appliedDate = new Date(application.submitted_at).toLocaleDateString(
     language === 'ar' ? 'ar-SA' : 'en-GB',
     { year: 'numeric', month: 'short', day: 'numeric' }
   );

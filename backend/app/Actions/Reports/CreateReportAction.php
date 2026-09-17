@@ -82,6 +82,7 @@ class CreateReportAction
                     $finalExists = Report::query()
                         ->where('training_assignment_id', $assignment->id)
                         ->where('report_type_id', $reportType->id)
+                        ->where('status', '!=', 'rejected')
                         ->lockForUpdate()
                         ->exists();
 
@@ -135,6 +136,7 @@ class CreateReportAction
                 ->where('training_assignment_id', $assignment->id)
                 ->where('report_type_id', $data['report_type_id'])
                 ->where('report_number', $data['report_number'])
+                ->where('status', '!=', 'rejected')
                 ->lockForUpdate()
                 ->exists();
 

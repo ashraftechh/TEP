@@ -37,6 +37,7 @@ class ApplicationFactory extends Factory
             'decision_reason' => null,
             'withdrawn_reason' => null,
             'version' => 1,
+            'submitted_at' => now(),
         ];
     }
 

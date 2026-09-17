@@ -27,6 +27,7 @@ return new class extends Migration
             $table->text('decision_reason')->nullable();
             $table->text('withdrawn_reason')->nullable();
             $table->unsignedInteger('version')->default(1);
+            $table->timestamp('submitted_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

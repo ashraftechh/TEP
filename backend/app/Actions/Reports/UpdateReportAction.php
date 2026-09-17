@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\DB;
 /**
  * TEP-674 — Update a report draft (PATCH /api/v1/reports/{report}).
  *
- * Allowed only while the report's status is still 'draft'; re-checked
- * inside the transaction under `lockForUpdate()` to guard against a
- * concurrent submit/review action changing the status between the
- * initial check and the write.
+ * Allowed while the report's status is 'draft', 'revision_requested', or
+ * 'rejected' — a rejected report is edited and resubmitted in place, the
+ * same flow as revision_requested, rather than requiring a brand-new
+ * report to be created. Re-checked inside the transaction under
+ * `lockForUpdate()` to guard against a concurrent submit/review action
+ * changing the status between the initial check and the write.
  */
 class UpdateReportAction
 {
@@ -29,7 +31,7 @@ class UpdateReportAction
      *     file_ids?: list<int>|null,
      * } $data
      */
-    public const EDITABLE_STATUSES = ['draft', 'revision_requested'];
+    public const EDITABLE_STATUSES = ['draft', 'revision_requested', 'rejected'];
 
     public function execute(Report $report, array $data): Report
     {

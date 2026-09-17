@@ -148,7 +148,7 @@ class CompanyApplicationsTest extends TestCase
             'fileable_id' => $uploader->id,
             'purpose' => 'cv',
             'disk' => 'public',
-            'path' => 'cvs/sample_cv_'.fake()->uuid().'.pdf',
+            'path' => 'cvs/sample_cv_' . fake()->uuid() . '.pdf',
             'original_name' => 'my_resume.pdf',
             'mime_type' => 'application/pdf',
             'size_bytes' => 1024 * 300,
@@ -290,7 +290,7 @@ class CompanyApplicationsTest extends TestCase
         $this->makeApplication($profileB, $oppB, 'submitted');
 
         $response = $this->actingAs($repUserA)
-            ->getJson('/api/v1/company/applications?opportunity_id='.$oppB->id);
+            ->getJson('/api/v1/company/applications?opportunity_id=' . $oppB->id);
 
         $response->assertOk();
         $this->assertCount(0, $response->json('data'));
@@ -312,7 +312,7 @@ class CompanyApplicationsTest extends TestCase
         $this->makeApplication($profile2, $opp2, 'submitted');
 
         $response = $this->actingAs($repUser)
-            ->getJson('/api/v1/company/applications?opportunity_id='.$opp1->id);
+            ->getJson('/api/v1/company/applications?opportunity_id=' . $opp1->id);
 
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));
@@ -382,9 +382,9 @@ class CompanyApplicationsTest extends TestCase
     }
 
     /**
-     * Test 8: default sorting is by created_at descending (newest first).
+     * Test 8: default sorting is by submitted_at descending (newest first).
      */
-    public function test_default_sort_is_created_at_descending(): void
+    public function test_default_sort_is_submitted_at_descending(): void
     {
         [$repUser, $company] = $this->createRepUser();
         $opp = $this->createOpportunity($company);
@@ -394,10 +394,12 @@ class CompanyApplicationsTest extends TestCase
 
         $older = $this->makeApplication($profile1, $opp, 'submitted');
         $older->created_at = now()->subDays(2);
+        $older->submitted_at = now()->subDays(2);
         $older->save();
 
         $newer = $this->makeApplication($profile2, $opp, 'submitted');
         $newer->created_at = now();
+        $newer->submitted_at = now();
         $newer->save();
 
         $response = $this->actingAs($repUser)
@@ -405,6 +407,40 @@ class CompanyApplicationsTest extends TestCase
 
         $response->assertOk();
         $this->assertEquals($newer->id, $response->json('data.0.id'));
+    }
+
+    /**
+     * Test 8b: a reapplied application (existing row reused, created_at
+     * stale) still sorts as newest because submitted_at is refreshed.
+     */
+    public function test_reapplied_application_sorts_as_newest_despite_old_created_at(): void
+    {
+        [$repUser, $company] = $this->createRepUser();
+        $opp = $this->createOpportunity($company);
+
+        [, $recentProfile] = $this->createStudentUser();
+        $recent = $this->makeApplication($recentProfile, $opp, 'submitted');
+        $recent->created_at = now()->subDay();
+        $recent->submitted_at = now()->subDay();
+        $recent->save();
+
+        [, $reapplyingProfile] = $this->createStudentUser();
+        $reapplied = $this->makeApplication($reapplyingProfile, $opp, 'withdrawn');
+        // Simulate the original submission being long ago — the reapply
+        // path (ApplicationController::store) never touches created_at.
+        $reapplied->created_at = now()->subDays(30);
+        $reapplied->submitted_at = now()->subDays(30);
+        $reapplied->save();
+
+        // Simulate the reapply path's own effect: only submitted_at moves.
+        $reapplied->update(['status' => 'submitted', 'submitted_at' => now()]);
+
+        $response = $this->actingAs($repUser)
+            ->getJson('/api/v1/company/applications');
+
+        $response->assertOk();
+        $this->assertEquals($reapplied->id, $response->json('data.0.id'));
+        $this->assertEquals($recent->id, $response->json('data.1.id'));
     }
 
     /**

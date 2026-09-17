@@ -615,6 +615,7 @@ function CompanyStudentsTable({
   assignments,
   language,
   searchTerm,
+  currentUserId,
   onView,
   onContact,
   onAttendance,
@@ -622,6 +623,7 @@ function CompanyStudentsTable({
   assignments: TrainingAssignmentItem[];
   language: string;
   searchTerm: string;
+  currentUserId?: number;
   onView: (a: TrainingAssignmentItem) => void;
   onContact: (a: TrainingAssignmentItem) => void;
   onAttendance: (a: TrainingAssignmentItem) => void;
@@ -767,17 +769,18 @@ function CompanyStudentsTable({
                         >
                           <MessageSquare className="w-4 h-4" />
                         </Button>
-                        {assignment.status === 'active' && (
-                          <Button
-                            variant="ghost"
+                       {assignment.status === 'active' &&
+                       assignment.field_supervisor?.id === currentUserId && (
+                         <Button
+                             variant="ghost"
                             size="sm"
                             className="cursor-pointer h-8 w-8 p-0 text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300"
-                            onClick={() => onAttendance(assignment)}
-                            title={t('attendance')}
-                            aria-label={t('attendance')}
-                          >
-                            <ClipboardList className="w-4 h-4" />
-                          </Button>
+                           onClick={() => onAttendance(assignment)}
+                           title={t('attendance')}
+                          aria-label={t('attendance')}
+                        >
+                          <ClipboardList className="w-4 h-4" />
+                        </Button>
                         )}
                       </div>
                     </TableCell>
@@ -984,6 +987,7 @@ function AssignmentsListView({ variant }: { variant: 'company' | 'supervisor' })
     (state) => state.trainingAssignment
   );
 
+const currentUserId = useAppSelector((state) => state.auth.user?.id);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [opportunityFilter, setOpportunityFilter] = useState<string>('all');
@@ -1427,6 +1431,7 @@ function AssignmentsListView({ variant }: { variant: 'company' | 'supervisor' })
             assignments={filteredAssignments}
             language={language}
             searchTerm={searchTerm}
+            currentUserId={currentUserId}
             onView={setSelected}
             onContact={setContactTarget}
             onAttendance={setAttendanceTarget}

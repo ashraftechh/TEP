@@ -49,8 +49,11 @@ class CreateTrainingAssignmentRequest extends FormRequest
             // Must belong to the SAME company as the opportunity the
             // application was for (TEP-661) — depends on application_id,
             // so this is a DataAwareRule rather than a plain exists rule.
-            // Nullable: coordinators may designate a field supervisor later.
-            'field_supervisor_id' => ['nullable', 'integer', 'exists:users,id', new FieldSupervisorBelongsToApplicationCompany],
+            // Required: every assignment must have a field supervisor from
+            // day one (matches the Filament form's ->required() on this
+            // field — previously this was nullable here while required in
+            // the form, so the API and admin UI disagreed).
+            'field_supervisor_id' => ['required', 'integer', 'exists:users,id', new FieldSupervisorBelongsToApplicationCompany],
 
             'start_date' => ['nullable', 'date'],
             'end_date' => [

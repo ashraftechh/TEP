@@ -68,6 +68,8 @@
   "resubmit": "Resubmit",
   "supervisorFeedback": "Supervisor Feedback",
   "revisionRequestedNotice": "Your academic supervisor requested revisions on this report. Please review the feedback above, make the necessary corrections, and resubmit.",
+  "rejectionReason": "Rejection Reason",
+  "rejectedNotice": "Your academic supervisor rejected this report. Please review the feedback above, address it fully, and resubmit.",
 
   "weekly": "Weekly",
   "monthly": "Monthly",
@@ -80,9 +82,6 @@
   },
 
   "daily": "Daily",
-  "weekly": "Weekly",
-  "monthly": "Monthly",
-  "final": "Final",
   "quotaLimitReached": "Quota reached",
   "totalQuotaReachedNotice": "All required reports for this placement have been created",
 

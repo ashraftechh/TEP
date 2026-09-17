@@ -29,7 +29,7 @@ return [
         'application' => 'Accepted Application',
         'academic_supervisor' => 'Academic Supervisor',
         'field_supervisor' => 'Field Supervisor',
-        'field_supervisor_hint' => 'Optional — select an accepted application first; only representatives of that opportunity\'s company are shown.',
+        'field_supervisor_hint' => 'Select an accepted application first; only representatives of that opportunity\'s company are shown.',
         'start_date' => 'Start Date',
         'end_date' => 'End Date',
         'required_reports_count' => 'Total Required Reports',

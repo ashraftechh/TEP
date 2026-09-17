@@ -45,7 +45,7 @@ class OpportunityResource extends JsonResource
             'applicants_count' => isset($this->applicants_count)
                 ? (int) $this->applicants_count
                 : ($this->relationLoaded('applications')
-                    ? $this->applications->count()
+                    ? $this->applications->whereNotIn('status', ['withdrawn', 'rejected'])->count()
                     : 0),
             'salary' => $this->salary !== null ? (float) $this->salary : null,
             'start_date' => $this->start_date?->format('Y-m-d'),
@@ -59,8 +59,8 @@ class OpportunityResource extends JsonResource
             'skills' => SkillResource::collection($this->whenLoaded('skills')),
             'requirements' => OpportunityRequirementResource::collection($this->whenLoaded('requirements')),
             'benefits' => OpportunityBenefitResource::collection($this->whenLoaded('benefits')),
-            'already_applied' => $this->when($request->user()?->hasRole('student'), fn () => (bool) ($this->already_applied ?? false)),
-            'has_active_assignment' => $this->when($request->user()?->hasRole('student'), fn () => (bool) ($this->has_active_assignment ?? false)),
+            'already_applied' => $this->when($request->user()?->hasRole('student'), fn() => (bool) ($this->already_applied ?? false)),
+            'has_active_assignment' => $this->when($request->user()?->hasRole('student'), fn() => (bool) ($this->has_active_assignment ?? false)),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

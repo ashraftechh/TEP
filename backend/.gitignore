@@ -5,15 +5,15 @@
 .env.production
 .phpactor.json
 .phpunit.result.cache
-# /.agents/
-# /.github/
-# /.idea
-# /.nova
-# /.mcp
-# /.mcp.json
-# /.npmrc
-# /boost.json
-# /opencode.json
+/.agents/
+/.github/
+/.idea
+/.nova
+/.mcp
+/.mcp.json
+/.npmrc
+/boost.json
+/opencode.json
 /.phpunit.cache
 /auth.json
 /node_modules

@@ -478,13 +478,11 @@ export const StudentReportsPage: React.FC = () => {
     );
   };
 
-  const hasExistingFinalReport = useMemo(() => {
-    const finalType = reportTypes.find((t) => t.code === 'final');
-    if (!finalType) return false;
-    return reports.some(
-      (r) => String(r.report_type_id) === String(finalType.id) && r.status !== 'rejected'
-    );
-  }, [reports, reportTypes]);
+const hasExistingFinalReport = useMemo(() => {
+  const finalType = reportTypes.find((t) => t.code === 'final');
+  if (!finalType) return false;
+  return reports.some((r) => String(r.report_type_id) === String(finalType.id));
+}, [reports, reportTypes]);
 
   // Allowed report types for this assignment based on coordinator configuration
   const allowedReportTypes = useMemo(() => {
@@ -498,35 +496,28 @@ export const StudentReportsPage: React.FC = () => {
   }, [reportTypes, myAssignment]);
 
   // Quota helper for a given report type code
-  const getTypeQuotaInfo = useCallback(
-    (typeCode?: string) => {
-      if (!typeCode) return { maxCount: null, count: 0, isReached: false };
-      const config = myAssignment?.report_configuration?.[typeCode];
-      const maxCount = config?.max_count;
-      const count = reports.filter(
-        (r) => r.report_type?.code === typeCode && r.status !== 'rejected'
-      ).length;
+const getTypeQuotaInfo = useCallback(
+  (typeCode?: string) => {
+    if (!typeCode) return { maxCount: null, count: 0, isReached: false };
+    const config = myAssignment?.report_configuration?.[typeCode];
+    const maxCount = config?.max_count;
+    const count = reports.filter((r) => r.report_type?.code === typeCode).length;
 
-      if (maxCount === undefined || maxCount === null || maxCount <= 0) {
-        return { maxCount: null, count, isReached: false };
-      }
-
-      return {
-        maxCount,
-        count,
-        isReached: count >= maxCount,
-      };
-    },
-    [myAssignment, reports]
-  );
+    if (maxCount === undefined || maxCount === null || maxCount <= 0) {
+      return { maxCount: null, count, isReached: false };
+    }
+    return { maxCount, count, isReached: count >= maxCount };
+  },
+  [myAssignment, reports]
+);
 
   // Total required reports ceiling check
-  const isTotalQuotaReached = useMemo(() => {
-    const totalRequired = myAssignment?.required_reports_count;
-    if (!totalRequired || totalRequired <= 0) return false;
-    const activeCount = reports.filter((r) => r.status !== 'rejected').length;
-    return activeCount >= totalRequired;
-  }, [myAssignment, reports]);
+const isTotalQuotaReached = useMemo(() => {
+  const totalRequired = myAssignment?.required_reports_count;
+  if (!totalRequired || totalRequired <= 0) return false;
+  const activeCount = reports.length;
+  return activeCount >= totalRequired;
+}, [myAssignment, reports]);
 
   // Quick filtered reports for student
   const visibleReports = useMemo(() => {
@@ -551,24 +542,24 @@ export const StudentReportsPage: React.FC = () => {
     [reports]
   );
 
-  const getNextReportNumber = useCallback(
-    (typeId?: string | number): string => {
-      if (!typeId) return '1';
-      const type = reportTypes.find((t) => String(t.id) === String(typeId));
-      if (type?.code === 'final') return '1';
-       const takenNumbers = new Set(
-        reports
-          .filter((r) => String(r.report_type_id) === String(typeId) && r.status !== 'rejected')
-          .map((r) => r.report_number)
-       );
-      let candidate = 1;
-      while (takenNumbers.has(candidate)) {
-        candidate += 1;
-      }
-      return String(candidate);
-    },
-    [reports, reportTypes]
-  );
+const getNextReportNumber = useCallback(
+  (typeId?: string | number): string => {
+    if (!typeId) return '1';
+    const type = reportTypes.find((t) => String(t.id) === String(typeId));
+    if (type?.code === 'final') return '1';
+    const takenNumbers = new Set(
+      reports
+        .filter((r) => String(r.report_type_id) === String(typeId))
+        .map((r) => r.report_number)
+    );
+    let candidate = 1;
+    while (takenNumbers.has(candidate)) {
+      candidate += 1;
+    }
+    return String(candidate);
+  },
+  [reports, reportTypes]
+);
 
   // ── File handling ──────────────────────────────────────────────────────────
 

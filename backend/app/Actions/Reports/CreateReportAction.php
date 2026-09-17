@@ -7,6 +7,7 @@ namespace App\Actions\Reports;
 use App\Exceptions\DuplicateReportException;
 use App\Exceptions\NoActiveTrainingAssignmentException;
 use App\Exceptions\ReportQuotaExceededException;
+use App\Exceptions\ReportSequenceNotMetException;
 use App\Exceptions\ReportTypeNotAllowedException;
 use App\Exceptions\TrainingCompletedException;
 use App\Models\File;
@@ -96,6 +97,36 @@ class CreateReportAction
                 // Check if this report type is enabled for this assignment
                 if (! $assignment->isReportTypeEnabled($reportType->code)) {
                     throw ReportTypeNotAllowedException::forType($reportType->code, $assignment->id);
+                }
+
+                // Enforce reporting-tier sequence: this type's nearest enabled
+                // prerequisite tier (daily -> weekly -> monthly -> final) must
+                // have enough approved reports before this one can be created.
+                $prereqType = $assignment->getPrerequisiteReportType($reportType->code);
+                if ($prereqType !== null) {
+                    $threshold = $assignment->getSequentialThreshold(
+                        $reportType->code,
+                        (int) $data['report_number']
+                    );
+
+                    if ($threshold !== null) {
+                        $approvedPrereqCount = Report::query()
+                            ->where('training_assignment_id', $assignment->id)
+                            ->whereHas('reportType', fn ($q) => $q->where('code', $prereqType))
+                            ->where('status', 'approved')
+                            ->lockForUpdate()
+                            ->count();
+
+                        if ($approvedPrereqCount < $threshold) {
+                            throw ReportSequenceNotMetException::forType(
+                                $reportType->code,
+                                $prereqType,
+                                $threshold,
+                                $approvedPrereqCount,
+                                $assignment->id
+                            );
+                        }
+                    }
                 }
 
                 // Check maximum allowed count for this specific report type

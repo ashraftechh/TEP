@@ -519,6 +519,101 @@ const isTotalQuotaReached = useMemo(() => {
   return activeCount >= totalRequired;
 }, [myAssignment, reports]);
 
+  // Recurring report tiers in ascending granularity order. `final` is
+  // handled separately below since it sits after all of them rather than
+  // at a fixed position in this list — mirrors
+  // TrainingAssignment::REPORT_TYPE_HIERARCHY on the backend.
+  const REPORT_TYPE_HIERARCHY = ['daily', 'weekly', 'monthly'] as const;
+
+  const isTypeEnabled = useCallback(
+    (typeCode: string) => {
+      const cfg = myAssignment?.report_configuration?.[typeCode];
+      return cfg === undefined || cfg.enabled !== false;
+    },
+    [myAssignment]
+  );
+
+  const getTypeMaxCount = useCallback(
+    (typeCode: string): number | null => {
+      const cfg = myAssignment?.report_configuration?.[typeCode];
+      if (cfg?.max_count) return cfg.max_count;
+      return typeCode === 'final' ? 1 : null;
+    },
+    [myAssignment]
+  );
+
+  // The nearest enabled tier below typeCode, or null if nothing is gating
+  // it. Mirrors TrainingAssignment::getPrerequisiteReportType() — disabled
+  // tiers are skipped rather than breaking the chain, and `final` resolves
+  // to the nearest enabled recurring tier of any kind.
+  const getPrerequisiteType = useCallback(
+    (typeCode: string): string | null => {
+      if (typeCode === 'final') {
+        for (const candidate of [...REPORT_TYPE_HIERARCHY].reverse()) {
+          if (isTypeEnabled(candidate) && getTypeMaxCount(candidate)) return candidate;
+        }
+        return null;
+      }
+      const index = REPORT_TYPE_HIERARCHY.indexOf(typeCode as (typeof REPORT_TYPE_HIERARCHY)[number]);
+      if (index <= 0) return null;
+      for (let i = index - 1; i >= 0; i--) {
+        const candidate = REPORT_TYPE_HIERARCHY[i];
+        if (isTypeEnabled(candidate) && getTypeMaxCount(candidate)) return candidate;
+      }
+      return null;
+    },
+    [isTypeEnabled, getTypeMaxCount]
+  );
+
+  // Approved-report count required from the prerequisite type before
+  // report #reportNumber of typeCode may be created. Distributes the
+  // prerequisite's total (NTILE-style — earliest slots absorb the
+  // remainder) — mirrors TrainingAssignment::getSequentialThreshold().
+  const getSequentialThreshold = useCallback(
+    (typeCode: string, reportNumber: number): number | null => {
+      const prereqType = getPrerequisiteType(typeCode);
+      if (!prereqType) return null;
+
+      const lowerMax = getTypeMaxCount(prereqType);
+      const higherMax = typeCode === 'final' ? 1 : getTypeMaxCount(typeCode);
+      if (!lowerMax || !higherMax) return null;
+
+      const base = Math.floor(lowerMax / higherMax);
+      const remainder = lowerMax % higherMax;
+
+      let cumulative = 0;
+      for (let i = 1; i <= Math.min(reportNumber, higherMax); i++) {
+        cumulative += base + (i <= remainder ? 1 : 0);
+      }
+      return cumulative;
+    },
+    [getPrerequisiteType, getTypeMaxCount]
+  );
+
+  // Whether the *next* report of typeCode is currently blocked by an
+  // unmet prerequisite tier, plus the numbers needed to explain why.
+  const getSequenceGate = useCallback(
+    (typeCode: string) => {
+      const prereqType = getPrerequisiteType(typeCode);
+      if (!prereqType) {
+        return { isBlocked: false, prereqType: null as string | null, required: 0, approved: 0 };
+      }
+
+      const nextNumber = reports.filter((r) => r.report_type?.code === typeCode).length + 1;
+      const threshold = getSequentialThreshold(typeCode, nextNumber);
+      if (threshold === null) {
+        return { isBlocked: false, prereqType: null as string | null, required: 0, approved: 0 };
+      }
+
+      const approvedCount = reports.filter(
+        (r) => r.report_type?.code === prereqType && r.status === 'approved'
+      ).length;
+
+      return { isBlocked: approvedCount < threshold, prereqType, required: threshold, approved: approvedCount };
+    },
+    [getPrerequisiteType, getSequentialThreshold, reports]
+  );
+
   // Quick filtered reports for student
   const visibleReports = useMemo(() => {
     return reports.filter((report) => {
@@ -678,6 +773,7 @@ const getNextReportNumber = useCallback(
     // Pick first enabled report type that has not yet reached its quota
     const availableTypes = allowedReportTypes.filter((t) => {
       if (t.code === 'final' && hasExistingFinalReport) return false;
+      if (getSequenceGate(t.code).isBlocked) return false;
       const quota = getTypeQuotaInfo(t.code);
       return !quota.isReached;
     });
@@ -831,6 +927,11 @@ const getNextReportNumber = useCallback(
           msg = t('errors.duplicateReport');
         } else if (errorCode === 'duplicate_final_report') {
           msg = t('errors.duplicateFinalReport');
+        } else if (errorCode === 'report_sequence_not_met') {
+          msg = t('errors.reportSequenceNotMet', {
+            defaultValue:
+              'You must complete and get approval for all prior-tier reports before creating this one.',
+          });
         }
         toast.error(msg);
       }
@@ -1321,7 +1422,14 @@ const getNextReportNumber = useCallback(
                           const isFinalAndAlreadyExists =
                             !editingReport && type.code === 'final' && hasExistingFinalReport;
                           const isQuotaReached = !editingReport && quota.isReached;
-                          const isDisabled = isFinalAndAlreadyExists || isQuotaReached;
+                          const sequenceGate = getSequenceGate(type.code);
+                          const isSequenceBlocked = !editingReport && sequenceGate.isBlocked;
+                          const isDisabled = isFinalAndAlreadyExists || isQuotaReached || isSequenceBlocked;
+                          const prereqTypeName = sequenceGate.prereqType
+                            ? getLocalizedName(
+                                reportTypes.find((rt) => rt.code === sequenceGate.prereqType)
+                              ) || sequenceGate.prereqType
+                            : '';
 
                           return (
                             <SelectItem key={type.id} value={String(type.id)} disabled={isDisabled}>
@@ -1329,7 +1437,8 @@ const getNextReportNumber = useCallback(
                                 <span>{getLocalizedName(type) || type.code}</span>
                                 {quota.maxCount !== null &&
                                   !isFinalAndAlreadyExists &&
-                                  !isQuotaReached && (
+                                  !isQuotaReached &&
+                                  !isSequenceBlocked && (
                                     <span className="text-[11px] text-muted-foreground font-normal">
                                       ({quota.count}/{quota.maxCount})
                                     </span>
@@ -1343,6 +1452,17 @@ const getNextReportNumber = useCallback(
                                 {isFinalAndAlreadyExists && (
                                   <span className="text-[11px] text-muted-foreground font-normal">
                                     ({t('finalReportAlreadyCreated')})
+                                  </span>
+                                )}
+                                {isSequenceBlocked && !isFinalAndAlreadyExists && (
+                                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-normal">
+                                    (
+                                    {t('sequenceNotMet', {
+                                      defaultValue: 'Requires {{required}} approved {{type}} first',
+                                      required: sequenceGate.required,
+                                      type: prereqTypeName,
+                                    })}
+                                    )
                                   </span>
                                 )}
                               </div>

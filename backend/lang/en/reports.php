@@ -16,6 +16,7 @@ return [
     'training_completed' => 'Your training is complete (final report approved). No further reports can be created or submitted.',
     'report_type_not_allowed' => 'This report type is not enabled for your training assignment.',
     'report_quota_exceeded' => 'You have reached the maximum allowed number of reports for this type or assignment.',
+    'report_sequence_not_met' => 'You must complete and get approval for all :prerequisite_type reports before creating a :type report.',
 
     'validation' => [
         'feedback_required' => 'Feedback is required.',

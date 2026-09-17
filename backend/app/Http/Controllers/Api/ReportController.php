@@ -14,6 +14,7 @@ use App\Exceptions\ReportNotEditableException;
 use App\Exceptions\ReportNotReviewableException;
 use App\Exceptions\ReportNotSubmittableException;
 use App\Exceptions\ReportQuotaExceededException;
+use App\Exceptions\ReportSequenceNotMetException;
 use App\Exceptions\ReportTypeNotAllowedException;
 use App\Exceptions\TrainingCompletedException;
 use App\Http\Controllers\Controller;
@@ -26,6 +27,7 @@ use App\Http\Requests\Reports\ViewReportReviewsRequest;
 use App\Http\Resources\ReportResource;
 use App\Http\Resources\ReportReviewResource;
 use App\Models\Report;
+use App\Models\ReportType;
 use App\Models\TrainingAssignment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -159,6 +161,19 @@ class ReportController extends Controller
             return response()->json([
                 'message' => __('reports.report_quota_exceeded'),
                 'error_code' => 'report_quota_exceeded',
+            ], 422);
+        } catch (ReportSequenceNotMetException $e) {
+            return response()->json([
+                'message' => __('reports.report_sequence_not_met', [
+                    'prerequisite_type' => ReportType::where('code', $e->prerequisiteType)->first()?->name ?? $e->prerequisiteType,
+                    'type' => ReportType::where('code', $e->typeCode)->first()?->name ?? $e->typeCode,
+                ]),
+                'error_code' => 'report_sequence_not_met',
+                'meta' => [
+                    'prerequisite_type' => $e->prerequisiteType,
+                    'required' => $e->required,
+                    'approved' => $e->approved,
+                ],
             ], 422);
         } catch (DuplicateReportException $e) {
             $isFinal = $e->errorCode === 'duplicate_final_report';

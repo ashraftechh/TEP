@@ -140,6 +140,96 @@ class TrainingAssignment extends Model
     }
 
     /**
+     * Recurring report types in ascending granularity order. `final` is
+     * deliberately excluded — it is always the last tier and is resolved
+     * separately in getPrerequisiteReportType() since it has no "count"
+     * of its own to sit at a position in this list.
+     *
+     * @var list<string>
+     */
+    public const REPORT_TYPE_HIERARCHY = ['daily', 'weekly', 'monthly'];
+
+    /**
+     * The nearest enabled tier below $typeCode in the reporting hierarchy,
+     * or null if $typeCode has no enabled tier below it (nothing to
+     * require first). Disabled tiers are skipped rather than breaking the
+     * chain — e.g. if `daily` is off, `weekly`'s prerequisite is null, and
+     * `monthly`'s prerequisite is `weekly` (or `daily` if `weekly` is also
+     * off).
+     *
+     * `final` resolves to the nearest enabled recurring tier of any kind
+     * (checked from most granular to least), since it sits after all of
+     * them rather than at a fixed position in REPORT_TYPE_HIERARCHY.
+     */
+    public function getPrerequisiteReportType(string $typeCode): ?string
+    {
+        if ($typeCode === 'final') {
+            foreach (array_reverse(self::REPORT_TYPE_HIERARCHY) as $candidate) {
+                if ($this->isReportTypeEnabled($candidate) && $this->getReportTypeMaxCount($candidate)) {
+                    return $candidate;
+                }
+            }
+
+            return null;
+        }
+
+        $index = array_search($typeCode, self::REPORT_TYPE_HIERARCHY, true);
+        if ($index === false || $index === 0) {
+            return null;
+        }
+
+        for ($i = $index - 1; $i >= 0; $i--) {
+            $candidate = self::REPORT_TYPE_HIERARCHY[$i];
+            if ($this->isReportTypeEnabled($candidate) && $this->getReportTypeMaxCount($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * How many approved reports of $typeCode's prerequisite type must
+     * exist before report #$reportNumber of $typeCode may be created or
+     * submitted. Returns null when $typeCode has no enabled prerequisite
+     * tier (nothing to gate on) or either side's quota isn't configured.
+     *
+     * Distributes the prerequisite type's total max count across this
+     * type's slots as evenly as possible — NTILE-style, earliest slots
+     * absorb the remainder — so an uneven ratio (e.g. 12 daily reports
+     * over 5 weekly reports) never produces an impossible or lopsided
+     * per-slot requirement. The cumulative total across all of this
+     * type's slots always sums to exactly the prerequisite's max count,
+     * which is what lets this same method also gate `final` (a single
+     * slot requiring the prerequisite's full count) without special-casing
+     * it separately.
+     */
+    public function getSequentialThreshold(string $typeCode, int $reportNumber): ?int
+    {
+        $prereqType = $this->getPrerequisiteReportType($typeCode);
+        if ($prereqType === null) {
+            return null;
+        }
+
+        $lowerMax = $this->getReportTypeMaxCount($prereqType);
+        $higherMax = $typeCode === 'final' ? 1 : $this->getReportTypeMaxCount($typeCode);
+
+        if (! $lowerMax || ! $higherMax) {
+            return null;
+        }
+
+        $base = intdiv($lowerMax, $higherMax);
+        $remainder = $lowerMax % $higherMax;
+
+        $cumulative = 0;
+        for ($i = 1; $i <= min($reportNumber, $higherMax); $i++) {
+            $cumulative += $base + ($i <= $remainder ? 1 : 0);
+        }
+
+        return $cumulative;
+    }
+
+    /**
      * The application this assignment formalises.
      *
      * @return BelongsTo<Application, $this>

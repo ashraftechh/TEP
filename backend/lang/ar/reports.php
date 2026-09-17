@@ -16,6 +16,7 @@ return [
     'training_completed' => 'اكتمل تدريبك (تم اعتماد التقرير النهائي). لا يمكن إنشاء تقارير جديدة أو إرسالها.',
     'report_type_not_allowed' => 'نوع التقرير هذا غير مفعل لهذا التدريب الميداني.',
     'report_quota_exceeded' => 'لقد وصلت إلى الحد الأقصى المسموح به من التقارير لهذا النوع أو التدريب.',
+    'report_sequence_not_met' => 'يجب إكمال جميع تقارير :prerequisite_type واعتمادها قبل إنشاء تقرير :type.',
 
     'validation' => [
         'feedback_required' => 'الملاحظات مطلوبة.',

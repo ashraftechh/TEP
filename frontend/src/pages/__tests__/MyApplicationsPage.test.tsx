@@ -52,6 +52,7 @@ const withdrawableApplication: ApplicationItem = {
   withdrawn_reason: null,
   version: 1,
   created_at: '2026-08-20T10:00:00Z',
+  submitted_at: '2026-08-20T10:00:00Z',
   updated_at: '2026-08-20T10:00:00Z',
   can_withdraw: true,
   opportunity: {

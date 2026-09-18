@@ -296,7 +296,7 @@ class SubmitReportTest extends TestCase
             ->postJson("/api/v1/reports/{$report->id}/submit");
 
         $response->assertOk()
-+            ->assertJsonPath('data.status', 'submitted');
+            ->assertJsonPath('data.status', 'submitted');
     }
 
     public function test_submitting_under_review_report_returns_422(): void

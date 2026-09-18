@@ -106,6 +106,12 @@ function serverAttachmentToEntry(a: ReportAttachment): UploadedFile {
 
 const FEEDBACK_CLAMP_THRESHOLD = 240;
 
+// Recurring report tiers in ascending granularity order. `final` is
+// handled separately below since it sits after all of them rather than
+// at a fixed position in this list — mirrors
+// TrainingAssignment::REPORT_TYPE_HIERARCHY on the backend.
+const REPORT_TYPE_HIERARCHY = ['daily', 'weekly', 'monthly'] as const;
+
 function FeedbackNote({
   text,
   variant,
@@ -478,11 +484,11 @@ export const StudentReportsPage: React.FC = () => {
     );
   };
 
-const hasExistingFinalReport = useMemo(() => {
-  const finalType = reportTypes.find((t) => t.code === 'final');
-  if (!finalType) return false;
-  return reports.some((r) => String(r.report_type_id) === String(finalType.id));
-}, [reports, reportTypes]);
+  const hasExistingFinalReport = useMemo(() => {
+    const finalType = reportTypes.find((t) => t.code === 'final');
+    if (!finalType) return false;
+    return reports.some((r) => String(r.report_type_id) === String(finalType.id));
+  }, [reports, reportTypes]);
 
   // Allowed report types for this assignment based on coordinator configuration
   const allowedReportTypes = useMemo(() => {
@@ -496,34 +502,28 @@ const hasExistingFinalReport = useMemo(() => {
   }, [reportTypes, myAssignment]);
 
   // Quota helper for a given report type code
-const getTypeQuotaInfo = useCallback(
-  (typeCode?: string) => {
-    if (!typeCode) return { maxCount: null, count: 0, isReached: false };
-    const config = myAssignment?.report_configuration?.[typeCode];
-    const maxCount = config?.max_count;
-    const count = reports.filter((r) => r.report_type?.code === typeCode).length;
+  const getTypeQuotaInfo = useCallback(
+    (typeCode?: string) => {
+      if (!typeCode) return { maxCount: null, count: 0, isReached: false };
+      const config = myAssignment?.report_configuration?.[typeCode];
+      const maxCount = config?.max_count;
+      const count = reports.filter((r) => r.report_type?.code === typeCode).length;
 
-    if (maxCount === undefined || maxCount === null || maxCount <= 0) {
-      return { maxCount: null, count, isReached: false };
-    }
-    return { maxCount, count, isReached: count >= maxCount };
-  },
-  [myAssignment, reports]
-);
+      if (maxCount === undefined || maxCount === null || maxCount <= 0) {
+        return { maxCount: null, count, isReached: false };
+      }
+      return { maxCount, count, isReached: count >= maxCount };
+    },
+    [myAssignment, reports]
+  );
 
   // Total required reports ceiling check
-const isTotalQuotaReached = useMemo(() => {
-  const totalRequired = myAssignment?.required_reports_count;
-  if (!totalRequired || totalRequired <= 0) return false;
-  const activeCount = reports.length;
-  return activeCount >= totalRequired;
-}, [myAssignment, reports]);
-
-  // Recurring report tiers in ascending granularity order. `final` is
-  // handled separately below since it sits after all of them rather than
-  // at a fixed position in this list — mirrors
-  // TrainingAssignment::REPORT_TYPE_HIERARCHY on the backend.
-  const REPORT_TYPE_HIERARCHY = ['daily', 'weekly', 'monthly'] as const;
+  const isTotalQuotaReached = useMemo(() => {
+    const totalRequired = myAssignment?.required_reports_count;
+    if (!totalRequired || totalRequired <= 0) return false;
+    const activeCount = reports.length;
+    return activeCount >= totalRequired;
+  }, [myAssignment, reports]);
 
   const isTypeEnabled = useCallback(
     (typeCode: string) => {
@@ -554,7 +554,9 @@ const isTotalQuotaReached = useMemo(() => {
         }
         return null;
       }
-      const index = REPORT_TYPE_HIERARCHY.indexOf(typeCode as (typeof REPORT_TYPE_HIERARCHY)[number]);
+      const index = REPORT_TYPE_HIERARCHY.indexOf(
+        typeCode as (typeof REPORT_TYPE_HIERARCHY)[number]
+      );
       if (index <= 0) return null;
       for (let i = index - 1; i >= 0; i--) {
         const candidate = REPORT_TYPE_HIERARCHY[i];
@@ -609,7 +611,12 @@ const isTotalQuotaReached = useMemo(() => {
         (r) => r.report_type?.code === prereqType && r.status === 'approved'
       ).length;
 
-      return { isBlocked: approvedCount < threshold, prereqType, required: threshold, approved: approvedCount };
+      return {
+        isBlocked: approvedCount < threshold,
+        prereqType,
+        required: threshold,
+        approved: approvedCount,
+      };
     },
     [getPrerequisiteType, getSequentialThreshold, reports]
   );
@@ -645,24 +652,24 @@ const isTotalQuotaReached = useMemo(() => {
   // status, which a coordinator can set independently of that).
   const isAssignmentNotActive = Boolean(myAssignment) && myAssignment?.status !== 'active';
 
-const getNextReportNumber = useCallback(
-  (typeId?: string | number): string => {
-    if (!typeId) return '1';
-    const type = reportTypes.find((t) => String(t.id) === String(typeId));
-    if (type?.code === 'final') return '1';
-    const takenNumbers = new Set(
-      reports
-        .filter((r) => String(r.report_type_id) === String(typeId))
-        .map((r) => r.report_number)
-    );
-    let candidate = 1;
-    while (takenNumbers.has(candidate)) {
-      candidate += 1;
-    }
-    return String(candidate);
-  },
-  [reports, reportTypes]
-);
+  const getNextReportNumber = useCallback(
+    (typeId?: string | number): string => {
+      if (!typeId) return '1';
+      const type = reportTypes.find((t) => String(t.id) === String(typeId));
+      if (type?.code === 'final') return '1';
+      const takenNumbers = new Set(
+        reports
+          .filter((r) => String(r.report_type_id) === String(typeId))
+          .map((r) => r.report_number)
+      );
+      let candidate = 1;
+      while (takenNumbers.has(candidate)) {
+        candidate += 1;
+      }
+      return String(candidate);
+    },
+    [reports, reportTypes]
+  );
 
   // ── File handling ──────────────────────────────────────────────────────────
 
@@ -1275,7 +1282,7 @@ const getNextReportNumber = useCallback(
                       )}
                     </div>
 
-                    {Boolean(feedbackText) && (
+                    {feedbackText && (
                       <FeedbackNote
                         text={feedbackText}
                         variant={
@@ -1465,7 +1472,8 @@ const getNextReportNumber = useCallback(
                           const isQuotaReached = !editingReport && quota.isReached;
                           const sequenceGate = getSequenceGate(type.code);
                           const isSequenceBlocked = !editingReport && sequenceGate.isBlocked;
-                          const isDisabled = isFinalAndAlreadyExists || isQuotaReached || isSequenceBlocked;
+                          const isDisabled =
+                            isFinalAndAlreadyExists || isQuotaReached || isSequenceBlocked;
                           const prereqTypeName = sequenceGate.prereqType
                             ? getLocalizedName(
                                 reportTypes.find((rt) => rt.code === sequenceGate.prereqType)
@@ -1861,12 +1869,14 @@ const getNextReportNumber = useCallback(
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Send className="h-5 w-5 text-[#5B50D6]" />
-              {reportToSubmit?.status === 'revision_requested' || reportToSubmit?.status === 'rejected'
+              {reportToSubmit?.status === 'revision_requested' ||
+              reportToSubmit?.status === 'rejected'
                 ? t('resubmitConfirmTitle')
                 : t('submitConfirmTitle')}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground pt-1">
-              {reportToSubmit?.status === 'revision_requested' || reportToSubmit?.status === 'rejected'
+              {reportToSubmit?.status === 'revision_requested' ||
+              reportToSubmit?.status === 'rejected'
                 ? t('resubmitConfirmDescription')
                 : t('submitConfirmDescription')}
             </DialogDescription>
@@ -1899,7 +1909,8 @@ const getNextReportNumber = useCallback(
               className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer rounded-lg px-4"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {reportToSubmit?.status === 'revision_requested' || reportToSubmit?.status === 'rejected'
+              {reportToSubmit?.status === 'revision_requested' ||
+              reportToSubmit?.status === 'rejected'
                 ? t('confirmResubmit')
                 : t('confirmSubmit')}
             </Button>

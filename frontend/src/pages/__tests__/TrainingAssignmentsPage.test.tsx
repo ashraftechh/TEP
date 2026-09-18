@@ -63,6 +63,7 @@ function makeAssignment(overrides: Partial<TrainingAssignmentItem> = {}): Traini
     required_reports_count: 4,
     total_reports: 4,
     reports_submitted_count: 2,
+    is_current: true,
     latest_attendance_status: null,
     suspension_reason: null,
     termination_reason: null,

@@ -21,6 +21,7 @@ const baseApplication: ApplicationItem = {
   withdrawn_reason: null,
   version: 1,
   created_at: '2026-08-01T00:00:00Z',
+  submitted_at: '2026-08-01T00:00:00Z',
   updated_at: '2026-08-01T00:00:00Z',
   can_withdraw: false,
   student_profile: {

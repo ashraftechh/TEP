@@ -158,10 +158,13 @@ export const SupervisorReportsPage: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchReports(includeHistory ? { include_history: true } : undefined));
+  }, [dispatch, includeHistory]);
+
+  useEffect(() => {
     if (reportTypes.length === 0 && !isLoadingReportTypes) {
       dispatch(fetchReportTypes());
     }
-  }, [dispatch, includeHistory]);
+  }, [dispatch, reportTypes.length, isLoadingReportTypes]);
 
   const formatDate = useCallback(
     (dateString?: string | null) => {
@@ -336,14 +339,14 @@ export const SupervisorReportsPage: React.FC = () => {
   const getTypeBadge = (typeCode?: string) => {
     switch (typeCode) {
       case 'daily':
-  return (
-    <Badge
-      variant="outline"
-      className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-none rounded-full px-2.5 py-0.5"
-    >
-      {t('daily', { defaultValue: 'Daily' })}
-    </Badge>
-  );
+        return (
+          <Badge
+            variant="outline"
+            className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-none rounded-full px-2.5 py-0.5"
+          >
+            {t('daily', { defaultValue: 'Daily' })}
+          </Badge>
+        );
       case 'weekly':
         return (
           <Badge

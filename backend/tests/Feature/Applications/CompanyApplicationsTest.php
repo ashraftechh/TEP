@@ -148,7 +148,7 @@ class CompanyApplicationsTest extends TestCase
             'fileable_id' => $uploader->id,
             'purpose' => 'cv',
             'disk' => 'public',
-            'path' => 'cvs/sample_cv_' . fake()->uuid() . '.pdf',
+            'path' => 'cvs/sample_cv_'.fake()->uuid().'.pdf',
             'original_name' => 'my_resume.pdf',
             'mime_type' => 'application/pdf',
             'size_bytes' => 1024 * 300,
@@ -290,7 +290,7 @@ class CompanyApplicationsTest extends TestCase
         $this->makeApplication($profileB, $oppB, 'submitted');
 
         $response = $this->actingAs($repUserA)
-            ->getJson('/api/v1/company/applications?opportunity_id=' . $oppB->id);
+            ->getJson('/api/v1/company/applications?opportunity_id='.$oppB->id);
 
         $response->assertOk();
         $this->assertCount(0, $response->json('data'));
@@ -312,7 +312,7 @@ class CompanyApplicationsTest extends TestCase
         $this->makeApplication($profile2, $opp2, 'submitted');
 
         $response = $this->actingAs($repUser)
-            ->getJson('/api/v1/company/applications?opportunity_id=' . $opp1->id);
+            ->getJson('/api/v1/company/applications?opportunity_id='.$opp1->id);
 
         $response->assertOk();
         $this->assertCount(1, $response->json('data'));

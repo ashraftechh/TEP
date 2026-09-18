@@ -201,7 +201,7 @@ class TrainingAssignmentResourceTest extends TestCase
             'fileable_id' => $profile->user_id,
             'purpose' => 'cv',
             'disk' => 'public',
-            'path' => 'cvs/sample_cv_' . fake()->uuid() . '.pdf',
+            'path' => 'cvs/sample_cv_'.fake()->uuid().'.pdf',
             'original_name' => 'my_resume.pdf',
             'mime_type' => 'application/pdf',
             'size_bytes' => 1024 * 300,

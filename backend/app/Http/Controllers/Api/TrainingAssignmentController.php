@@ -334,7 +334,7 @@ class TrainingAssignmentController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return (TrainingAssignmentResource::collection($assignments))
+        return TrainingAssignmentResource::collection($assignments)
             ->additional([
                 'message' => __('training_assignments.fetched_successfully'),
             ])

@@ -47,8 +47,8 @@ class OpportunityController extends Controller
             'requirements',
             'benefits',
         ])->withCount([
-            'applications as applicants_count' => fn($q) => $q->whereNotIn('status', ['withdrawn', 'rejected']),
-            'applications as accepted_applications_count' => fn($q) => $q->where('status', 'accepted'),
+            'applications as applicants_count' => fn ($q) => $q->whereNotIn('status', ['withdrawn', 'rejected']),
+            'applications as accepted_applications_count' => fn ($q) => $q->where('status', 'accepted'),
         ]);
 
         if ($user->hasRole('company_representative')) {
@@ -63,7 +63,7 @@ class OpportunityController extends Controller
             $query->where('company_id', $company->id);
         } elseif ($user->hasRole('student')) {
             $query->where('status', 'published')
-                ->whereHas('company', fn($q) => $q->where('status', 'approved'))
+                ->whereHas('company', fn ($q) => $q->where('status', 'approved'))
                 ->where(function ($q): void {
                     $q->whereNull('application_deadline')
                         ->orWhere(
@@ -88,13 +88,13 @@ class OpportunityController extends Controller
         // Filter: major_id
         if ($request->filled('major_id')) {
             $majorId = (int) $request->input('major_id');
-            $query->whereHas('majors', fn($q) => $q->where('majors.id', $majorId));
+            $query->whereHas('majors', fn ($q) => $q->where('majors.id', $majorId));
         }
 
         // Filter: skill_id
         if ($request->filled('skill_id')) {
             $skillId = (int) $request->input('skill_id');
-            $query->whereHas('skills', fn($q) => $q->where('skills.id', $skillId));
+            $query->whereHas('skills', fn ($q) => $q->where('skills.id', $skillId));
         }
 
         // Filter: opportunity_type_id
@@ -219,8 +219,8 @@ class OpportunityController extends Controller
         ]);
 
         $opportunity->loadCount([
-            'applications as applicants_count' => fn($q) => $q->whereNotIn('status', ['withdrawn', 'rejected']),
-            'applications as accepted_applications_count' => fn($q) => $q->where('status', 'accepted'),
+            'applications as applicants_count' => fn ($q) => $q->whereNotIn('status', ['withdrawn', 'rejected']),
+            'applications as accepted_applications_count' => fn ($q) => $q->where('status', 'accepted'),
         ]);
 
         return (new OpportunityResource($opportunity))

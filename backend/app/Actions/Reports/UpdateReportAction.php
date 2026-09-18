@@ -22,15 +22,19 @@ use Illuminate\Support\Facades\DB;
  * `lockForUpdate()` to guard against a concurrent submit/review action
  * changing the status between the initial check and the write.
  *
- * If `report_type_id` and/or `report_number` are part of the patch and
- * either actually changes, the same ReportPlacementValidator that
- * CreateReportAction runs is re-run against the new pair (excluding this
- * report's own row from the duplicate check) — without this, a student
- * could edit a legitimately-created draft into a type/number combination
- * that would never have been allowed at creation time (wrong type not
- * enabled, sequence not met, quota exceeded, or a duplicate of another
- * report), since editing content/title alone previously skipped all of
- * CreateReportAction's checks entirely.
+ * If `report_type_id` and/or `report_number` are part of the patch, the
+ * same ReportPlacementValidator that CreateReportAction runs is re-run
+ * against the new pair (excluding this report's own row from the
+ * duplicate check) — even when the submitted value is unchanged from
+ * what's already stored, since the assignment's report_configuration
+ * can be edited after the report was created, and a type/number that
+ * was valid at creation time may no longer be (e.g. its type has since
+ * been disabled). Without this, a student could edit a legitimately-
+ * created draft into a type/number combination that would never have
+ * been allowed at creation time (wrong type not enabled, sequence not
+ * met, quota exceeded, or a duplicate of another report), since editing
+ * content/title alone previously skipped all of CreateReportAction's
+ * checks entirely.
  *
  * Also blocked, for ANY field, once the report's training assignment is
  * no longer 'active' (suspended/terminated/completed) — a draft left
@@ -99,8 +103,8 @@ class UpdateReportAction
                 }
             }
 
-            $typeOrNumberChanged = $newReportTypeId !== (int) $locked->report_type_id
-                || $newReportNumber !== (int) $locked->report_number;
+            $typeOrNumberChanged = array_key_exists('report_type_id', $data)
+                || array_key_exists('report_number', $data);
 
             if ($typeOrNumberChanged) {
                 $this->placementValidator->validate(

@@ -286,7 +286,7 @@ class SearchOpportunitiesTest extends TestCase
         $this->assertNotContains($unapprovedCompanyOpp->id, $returnedIds);
     }
 
-        public function test_student_does_not_see_opportunities_past_application_deadline(): void
+    public function test_student_does_not_see_opportunities_past_application_deadline(): void
     {
         // Still open: deadline in the future.
         $openOpp = Opportunity::factory()->create([
@@ -337,7 +337,7 @@ class SearchOpportunitiesTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('data.application_open', false);
     }
-    
+
     public function test_company_rep_sees_all_statuses_of_own_company_and_none_of_others(): void
     {
         // Rep 1's company opps (draft, published, closed)

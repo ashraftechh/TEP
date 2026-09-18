@@ -37,12 +37,12 @@ class TrainingAssignmentForm
                         ->description(__('training_assignments.form.filter_section_hint'))
                         ->collapsed(false)
                         ->columnSpanFull()
-                        ->visible(fn(string $operation): bool => $operation === 'create')
+                        ->visible(fn (string $operation): bool => $operation === 'create')
                         ->schema([
                             Grid::make(3)->schema([
                                 Select::make('_filter_company_id')
                                     ->label(__('training_assignments.form.filter_by_company'))
-                                    ->options(fn(): array => static::companyFilterOptions())
+                                    ->options(fn (): array => static::companyFilterOptions())
                                     ->searchable()
                                     ->preload()
                                     ->live()
@@ -55,17 +55,17 @@ class TrainingAssignmentForm
 
                                 Select::make('_filter_opportunity_id')
                                     ->label(__('training_assignments.form.filter_by_opportunity'))
-                                    ->options(fn(callable $get): array => static::opportunityFilterOptions((int) $get('_filter_company_id') ?: null))
+                                    ->options(fn (callable $get): array => static::opportunityFilterOptions((int) $get('_filter_company_id') ?: null))
                                     ->searchable()
                                     ->preload()
                                     ->live()
                                     ->dehydrated(false)
                                     ->placeholder(__('training_assignments.form.all_opportunities'))
-                                    ->afterStateUpdated(fn(callable $set) => $set('application_id', null)),
+                                    ->afterStateUpdated(fn (callable $set) => $set('application_id', null)),
 
                                 Select::make('_filter_student_id')
                                     ->label(__('training_assignments.form.filter_by_student'))
-                                    ->options(fn(callable $get): array => static::studentFilterOptions(
+                                    ->options(fn (callable $get): array => static::studentFilterOptions(
                                         (int) $get('_filter_company_id') ?: null,
                                         (int) $get('_filter_opportunity_id') ?: null,
                                     ))
@@ -74,14 +74,14 @@ class TrainingAssignmentForm
                                     ->live()
                                     ->dehydrated(false)
                                     ->placeholder(__('training_assignments.form.all_students'))
-                                    ->afterStateUpdated(fn(callable $set) => $set('application_id', null)),
+                                    ->afterStateUpdated(fn (callable $set) => $set('application_id', null)),
                             ]),
                         ]),
 
                     // ── Application select (filtered by the helpers above) ────────────
                     Select::make('application_id')
                         ->label(__('training_assignments.form.application'))
-                        ->options(fn(callable $get, ?TrainingAssignment $record): array => static::applicationOptions(
+                        ->options(fn (callable $get, ?TrainingAssignment $record): array => static::applicationOptions(
                             $record,
                             (int) $get('_filter_company_id') ?: null,
                             (int) $get('_filter_opportunity_id') ?: null,
@@ -91,20 +91,20 @@ class TrainingAssignmentForm
                         ->preload()
                         ->live()
                         ->required()
-                        ->disabled(fn(string $operation): bool => $operation === 'edit')
+                        ->disabled(fn (string $operation): bool => $operation === 'edit')
                         ->columnSpanFull()
-                        ->afterStateUpdated(fn($state, callable $set) => $set('field_supervisor_id', null)),
+                        ->afterStateUpdated(fn ($state, callable $set) => $set('field_supervisor_id', null)),
 
                     Select::make('academic_supervisor_id')
                         ->label(__('training_assignments.form.academic_supervisor'))
-                        ->options(fn() => static::academicSupervisorOptions())
+                        ->options(fn () => static::academicSupervisorOptions())
                         ->searchable()
                         ->preload()
                         ->required(),
 
                     Select::make('field_supervisor_id')
                         ->label(__('training_assignments.form.field_supervisor'))
-                        ->options(fn(callable $get, ?TrainingAssignment $record) => static::fieldSupervisorOptions($get('application_id') ?? $record?->application_id))
+                        ->options(fn (callable $get, ?TrainingAssignment $record) => static::fieldSupervisorOptions($get('application_id') ?? $record?->application_id))
                         ->searchable()
                         ->preload()
                         ->required()
@@ -113,29 +113,29 @@ class TrainingAssignmentForm
                     DatePicker::make('start_date')
                         ->label(__('training_assignments.form.start_date'))
                         ->required()
-                        ->minDate(fn(string $operation) => $operation === 'create' ? today() : null)
+                        ->minDate(fn (string $operation) => $operation === 'create' ? today() : null)
                         ->live()
-                        ->afterStateUpdated(fn($state, callable $get, callable $set) => static::recalculateReportConfig($get, $set)),
+                        ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::recalculateReportConfig($get, $set)),
 
                     DatePicker::make('end_date')
                         ->label(__('training_assignments.form.end_date'))
                         ->required()
-                        ->minDate(fn(string $operation) => $operation === 'create' ? today() : null)
+                        ->minDate(fn (string $operation) => $operation === 'create' ? today() : null)
                         ->afterOrEqual('start_date')
                         ->live()
-                        ->afterStateUpdated(fn($state, callable $get, callable $set) => static::recalculateReportConfig($get, $set)),
+                        ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::recalculateReportConfig($get, $set)),
                 ]),
 
                 Section::make(__('training_assignments.form.report_configuration_section'))
-                    ->description(fn(callable $get) => static::getDurationDescription($get))
+                    ->description(fn (callable $get) => static::getDurationDescription($get))
                     ->schema([
                         Grid::make(2)->schema([
                             Toggle::make('daily_enabled')
                                 ->label(__('training_assignments.form.enable_daily_reports'))
                                 ->default(false)
                                 ->live()
-                                ->visible(fn(callable $get) => static::getDurationDetails($get)['days'] >= 1)
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::onDailyToggleUpdated((bool) $state, $get, $set)),
+                                ->visible(fn (callable $get) => static::getDurationDetails($get)['days'] >= 1)
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::onDailyToggleUpdated((bool) $state, $get, $set)),
 
                             TextInput::make('daily_count')
                                 ->label(__('training_assignments.form.daily_reports_count'))
@@ -143,15 +143,15 @@ class TrainingAssignmentForm
                                 ->minValue(1)
                                 ->default(0)
                                 ->live()
-                                ->visible(fn(callable $get) => (bool) $get('daily_enabled'))
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
+                                ->visible(fn (callable $get) => (bool) $get('daily_enabled'))
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
 
                             Toggle::make('weekly_enabled')
                                 ->label(__('training_assignments.form.enable_weekly_reports'))
                                 ->default(true)
                                 ->live()
-                                ->visible(fn(callable $get) => static::getDurationDetails($get)['weeks'] >= 1)
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::onWeeklyToggleUpdated((bool) $state, $get, $set)),
+                                ->visible(fn (callable $get) => static::getDurationDetails($get)['weeks'] >= 1)
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::onWeeklyToggleUpdated((bool) $state, $get, $set)),
 
                             TextInput::make('weekly_count')
                                 ->label(__('training_assignments.form.weekly_reports_count'))
@@ -159,15 +159,15 @@ class TrainingAssignmentForm
                                 ->minValue(1)
                                 ->default(0)
                                 ->live()
-                                ->visible(fn(callable $get) => (bool) $get('weekly_enabled'))
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
+                                ->visible(fn (callable $get) => (bool) $get('weekly_enabled'))
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
 
                             Toggle::make('monthly_enabled')
                                 ->label(__('training_assignments.form.enable_monthly_reports'))
                                 ->default(false)
                                 ->live()
-                                ->visible(fn(callable $get) => static::getDurationDetails($get)['months'] >= 1)
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::onMonthlyToggleUpdated((bool) $state, $get, $set)),
+                                ->visible(fn (callable $get) => static::getDurationDetails($get)['months'] >= 1)
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::onMonthlyToggleUpdated((bool) $state, $get, $set)),
 
                             TextInput::make('monthly_count')
                                 ->label(__('training_assignments.form.monthly_reports_count'))
@@ -175,15 +175,15 @@ class TrainingAssignmentForm
                                 ->minValue(1)
                                 ->default(0)
                                 ->live()
-                                ->visible(fn(callable $get) => (bool) $get('monthly_enabled'))
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
+                                ->visible(fn (callable $get) => (bool) $get('monthly_enabled'))
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
 
                             Toggle::make('final_enabled')
                                 ->label(__('training_assignments.form.require_final_report'))
                                 ->default(true)
                                 ->live()
-                                ->visible(fn(callable $get) => static::getDurationDetails($get)['days'] >= 1)
-                                ->afterStateUpdated(fn($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
+                                ->visible(fn (callable $get) => static::getDurationDetails($get)['days'] >= 1)
+                                ->afterStateUpdated(fn ($state, callable $get, callable $set) => static::updateTotalReportsCount($get, $set)),
 
                             TextInput::make('required_reports_count')
                                 ->label(__('training_assignments.form.required_reports_count'))
@@ -399,7 +399,7 @@ class TrainingAssignmentForm
         $locale = app()->getLocale();
 
         return Opportunity::query()
-            ->when($companyId !== null, fn($q) => $q->where('company_id', $companyId))
+            ->when($companyId !== null, fn ($q) => $q->where('company_id', $companyId))
             ->whereHas('applications', function ($q): void {
                 $q->where('status', 'accepted')
                     ->whereDoesntHave('trainingAssignment')
@@ -431,8 +431,8 @@ class TrainingAssignmentForm
             ->whereHas('applications', function ($q) use ($companyId, $opportunityId): void {
                 $q->where('status', 'accepted')
                     ->whereDoesntHave('trainingAssignment')
-                    ->when($opportunityId !== null, fn($oq) => $oq->where('opportunity_id', $opportunityId))
-                    ->when($companyId !== null, fn($oq) => $oq->whereHas('opportunity', fn($coq) => $coq->where('company_id', $companyId)));
+                    ->when($opportunityId !== null, fn ($oq) => $oq->where('opportunity_id', $opportunityId))
+                    ->when($companyId !== null, fn ($oq) => $oq->whereHas('opportunity', fn ($coq) => $coq->where('company_id', $companyId)));
             })
             ->whereDoesntHave('trainingAssignments', function ($q): void {
                 $q->whereIn('status', ['active', 'suspended']);
@@ -481,24 +481,24 @@ class TrainingAssignmentForm
                     $query->orWhere('id', $record->application_id);
                 }
             })
-            ->when($companyId !== null, fn($query) => $query->whereHas('opportunity', fn($q) => $q->where('company_id', $companyId)))
-            ->when($opportunityId !== null, fn($query) => $query->where('opportunity_id', $opportunityId))
-            ->when($studentProfileId !== null, fn($query) => $query->where('student_profile_id', $studentProfileId))
+            ->when($companyId !== null, fn ($query) => $query->whereHas('opportunity', fn ($q) => $q->where('company_id', $companyId)))
+            ->when($opportunityId !== null, fn ($query) => $query->where('opportunity_id', $opportunityId))
+            ->when($studentProfileId !== null, fn ($query) => $query->where('student_profile_id', $studentProfileId))
             ->when($term !== '', function ($query) use ($term): void {
                 $query->where(function ($q) use ($term): void {
                     // Student name
-                    $q->whereHas('studentProfile.user', fn($u) => $u->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"]))
+                    $q->whereHas('studentProfile.user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"]))
                         // Opportunity title (ar or en)
                         ->orWhereHas(
                             'opportunity',
-                            fn($o) => $o
+                            fn ($o) => $o
                                 ->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ar'))) LIKE ?", ["%{$term}%"])
                                 ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", ["%{$term}%"])
                         )
                         // Company name (ar or en)
                         ->orWhereHas(
                             'opportunity.company',
-                            fn($c) => $c
+                            fn ($c) => $c
                                 ->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ar'))) LIKE ?", ["%{$term}%"])
                                 ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$term}%"])
                         );
@@ -507,7 +507,7 @@ class TrainingAssignmentForm
             ->with(['studentProfile.user', 'opportunity.company'])
             ->limit(50)
             ->get()
-            ->mapWithKeys(fn(Application $application): array => [
+            ->mapWithKeys(fn (Application $application): array => [
                 $application->id => static::applicationLabel($application),
             ])
             ->all();
@@ -547,7 +547,7 @@ class TrainingAssignmentForm
     protected static function academicSupervisorOptions(): array
     {
         return User::query()
-            ->whereHas('userRoles.role', fn($query) => $query->where('name', 'academic_supervisor'))
+            ->whereHas('userRoles.role', fn ($query) => $query->where('name', 'academic_supervisor'))
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
@@ -576,7 +576,7 @@ class TrainingAssignmentForm
             ->where('company_id', $application->opportunity->company_id)
             ->with('user')
             ->get()
-            ->mapWithKeys(fn(CompanyRepresentative $representative) => [
+            ->mapWithKeys(fn (CompanyRepresentative $representative) => [
                 $representative->user_id => $representative->user?->name ?? '—',
             ])
             ->all();

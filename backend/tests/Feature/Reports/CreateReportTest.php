@@ -22,6 +22,7 @@ use App\Models\UserRole;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\ReportTypeSeeder;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -525,7 +526,7 @@ class CreateReportTest extends TestCase
             'version' => 0,
         ]);
 
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         // Bypasses application-level checks entirely (direct DB insert) to
         // prove the constraint itself — not just ReportPlacementValidator

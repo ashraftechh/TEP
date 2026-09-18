@@ -72,6 +72,16 @@ class CreateTrainingAssignmentAction
                 }
             }
 
+            // This student may already have a prior training_assignments
+            // row (completed/terminated) marked is_current — the new
+            // assignment being created here always supersedes it. Flip
+            // every one of the student's existing assignments to
+            // is_current = false first, then create the new one as the
+            // current one, all inside this same transaction so there's
+            // never a moment with zero or multiple "current" rows.
+            TrainingAssignment::where('student_profile_id', $locked->student_profile_id)
+                ->update(['is_current' => false]);
+
             $assignment = TrainingAssignment::create([
                 'application_id' => $locked->id,
                 'student_profile_id' => $locked->student_profile_id,
@@ -81,6 +91,7 @@ class CreateTrainingAssignmentAction
                 'field_supervisor_id' => $data['field_supervisor_id'] ?? null,
                 'training_coordinator_id' => $coordinator->id,
                 'status' => TrainingAssignment::STATUSES[0], // 'active'
+                'is_current' => true,
                 'start_date' => $data['start_date'] ?? null,
                 'end_date' => $data['end_date'] ?? null,
                 'progress_percentage' => 0,
@@ -89,10 +100,20 @@ class CreateTrainingAssignmentAction
                 'version' => 1,
             ]);
 
-            // Auto-resolve any other accepted or pending applications for this student.
+            // Auto-resolve any other accepted or pending applications for
+            // this student — but only ones that were NEVER converted into
+            // a training assignment of their own. An application that
+            // already has a training_assignment row (regardless of that
+            // assignment's current status — e.g. the application behind
+            // an already-completed prior placement) is not a competing
+            // risk: DuplicateTrainingAssignmentException already prevents
+            // a second assignment from ever being created off the same
+            // application, so withdrawing it here would only incorrectly
+            // discard a legitimately-used, already-consumed application.
             $otherApplications = Application::where('student_profile_id', $locked->student_profile_id)
                 ->where('id', '!=', $locked->id)
                 ->whereIn('status', ['accepted', ...Application::ACTIVE_STATUSES])
+                ->whereDoesntHave('trainingAssignment')
                 ->get();
 
             foreach ($otherApplications as $otherApp) {

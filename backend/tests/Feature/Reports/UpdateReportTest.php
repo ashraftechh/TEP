@@ -322,4 +322,77 @@ class UpdateReportTest extends TestCase
 
         $response->assertStatus(401);
     }
+
+    public function test_changing_report_type_to_a_disabled_type_is_rejected(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $assignment->update(['report_configuration' => ['weekly' => ['enabled' => false, 'max_count' => 0]]]);
+        $report = $this->makeReport($assignment);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->patchJson("/api/v1/reports/{$report->id}", [
+                'report_type_id' => $this->weeklyType->id,
+                'report_number' => 1,
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'report_type_not_allowed');
+    }
+
+    public function test_changing_report_number_to_collide_with_another_report_is_rejected(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $this->makeReport($assignment, status: 'draft', number: 1);
+        $reportTwo = $this->makeReport($assignment, status: 'draft', number: 2);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->patchJson("/api/v1/reports/{$reportTwo->id}", [
+                'report_number' => 1,
+            ]);
+
+        $response->assertStatus(409)
+            ->assertJsonPath('error_code', 'duplicate_report');
+
+        $this->assertDatabaseHas('reports', [
+            'id' => $reportTwo->id,
+            'report_number' => 2,
+        ]);
+    }
+
+    public function test_editing_content_only_does_not_rerun_placement_validation(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $this->makeReport($assignment, status: 'draft', number: 1);
+        $reportTwo = $this->makeReport($assignment, status: 'draft', number: 2);
+
+        // Same report_number as before (2) — no actual change — should not
+        // trigger the duplicate check against itself.
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->patchJson("/api/v1/reports/{$reportTwo->id}", [
+                'content' => 'Only the content changed.',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.content', 'Only the content changed.');
+    }
+
+    public function test_editing_a_report_on_a_completed_assignment_returns_422(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $report = $this->makeReport($assignment);
+        $assignment->update(['status' => 'completed']);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->patchJson("/api/v1/reports/{$report->id}", [
+                'content' => 'Trying to edit after the assignment ended.',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'assignment_not_active');
+
+        $this->assertDatabaseHas('reports', [
+            'id' => $report->id,
+            'content' => 'Original content.',
+        ]);
+    }
 }

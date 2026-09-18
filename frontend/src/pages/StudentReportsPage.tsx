@@ -637,6 +637,14 @@ const isTotalQuotaReached = useMemo(() => {
     [reports]
   );
 
+  // Once a coordinator suspends/terminates/completes the assignment, the
+  // backend blocks creating, editing, or submitting reports against it —
+  // this mirrors that on the frontend so the buttons don't lie about what
+  // will happen. Distinct from isTrainingCompleted (that fires on an
+  // approved final report existing; this fires on the assignment's own
+  // status, which a coordinator can set independently of that).
+  const isAssignmentNotActive = Boolean(myAssignment) && myAssignment?.status !== 'active';
+
 const getNextReportNumber = useCallback(
   (typeId?: string | number): string => {
     if (!typeId) return '1';
@@ -957,20 +965,28 @@ const getNextReportNumber = useCallback(
         <Button
           onClick={handleOpenCreateDialog}
           disabled={
-            isTrainingCompleted || (!isFetchingMyAssignment && !myAssignment) || isTotalQuotaReached
+            isTrainingCompleted ||
+            isAssignmentNotActive ||
+            (!isFetchingMyAssignment && !myAssignment) ||
+            isTotalQuotaReached
           }
           title={
             !isFetchingMyAssignment && !myAssignment
               ? t('noActiveAssignmentNotice', { defaultValue: 'No active training placement' })
-              : isTrainingCompleted
-                ? t('trainingCompletedDisabledHint', {
-                    defaultValue: 'Training is complete — no new reports can be created',
+              : isAssignmentNotActive
+                ? t('assignmentNotActiveHint', {
+                    defaultValue: `Training assignment is ${myAssignment?.status} — no further reports can be created`,
+                    status: myAssignment?.status,
                   })
-                : isTotalQuotaReached
-                  ? t('totalQuotaReachedNotice', {
-                      defaultValue: 'All required reports for this placement have been created',
+                : isTrainingCompleted
+                  ? t('trainingCompletedDisabledHint', {
+                      defaultValue: 'Training is complete — no new reports can be created',
                     })
-                  : undefined
+                  : isTotalQuotaReached
+                    ? t('totalQuotaReachedNotice', {
+                        defaultValue: 'All required reports for this placement have been created',
+                      })
+                    : undefined
           }
           className="gap-2 shrink-0 bg-[#5B50D6] hover:bg-[#4E44C4] text-white font-medium shadow-sm rounded-lg px-4 py-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -996,7 +1012,11 @@ const getNextReportNumber = useCallback(
                     </h3>
                     <Badge
                       variant="outline"
-                      className="text-xs font-normal border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"
+                      className={
+                        isAssignmentNotActive
+                          ? 'text-xs font-normal border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                          : 'text-xs font-normal border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+                      }
                     >
                       {t(`status.${myAssignment.status}`, myAssignment.status)}
                     </Badge>
@@ -1035,11 +1055,26 @@ const getNextReportNumber = useCallback(
         </Card>
       )}
 
-      {/* Notice if student has no active placement */}
+      {/* Notice if student has no active placement at all */}
       {!isFetchingMyAssignment && !myAssignment && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <span>{t('noActiveAssignmentNotice')}</span>
+        </div>
+      )}
+
+      {/* Notice if the student HAS a placement, but it's no longer active
+          (suspended/terminated/completed by the coordinator) — distinct
+          from the "no placement at all" notice above. */}
+      {isAssignmentNotActive && (
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200 text-sm">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <span>
+            {t('assignmentNotActiveNotice', {
+              defaultValue: `Training assignment is ${myAssignment?.status} — no further reports can be created, edited, or submitted.`,
+              status: myAssignment?.status,
+            })}
+          </span>
         </div>
       )}
 
@@ -1080,7 +1115,7 @@ const getNextReportNumber = useCallback(
             <p className="text-sm text-muted-foreground max-w-sm">
               {!myAssignment ? t('noActiveAssignmentNotice') : t('emptyDescription')}
             </p>
-            {myAssignment && !isTrainingCompleted && (
+            {myAssignment && !isTrainingCompleted && !isAssignmentNotActive && (
               <Button
                 onClick={handleOpenCreateDialog}
                 size="sm"
@@ -1155,9 +1190,10 @@ const getNextReportNumber = useCallback(
           const isOverdue =
             !report.submitted_at && Boolean(report.due_at) && new Date(report.due_at!) < new Date();
           const isEditable =
-            report.status === 'draft' ||
-            report.status === 'revision_requested' ||
-            report.status === 'rejected';
+            (report.status === 'draft' ||
+              report.status === 'revision_requested' ||
+              report.status === 'rejected') &&
+            !isAssignmentNotActive;
           const isSubmittable =
             report.status === 'draft' ||
             report.status === 'revision_requested' ||
@@ -1287,14 +1323,19 @@ const getNextReportNumber = useCallback(
                     {isSubmittable && (
                       <Button
                         size="sm"
-                        disabled={isTrainingCompleted}
+                        disabled={isTrainingCompleted || isAssignmentNotActive}
                         title={
-                          isTrainingCompleted
-                            ? t('trainingCompletedDisabledHint', {
-                                defaultValue:
-                                  'Training is complete — no further submissions allowed',
+                          isAssignmentNotActive
+                            ? t('assignmentNotActiveHint', {
+                                defaultValue: `Training assignment is ${myAssignment?.status} — no further submissions allowed`,
+                                status: myAssignment?.status,
                               })
-                            : undefined
+                            : isTrainingCompleted
+                              ? t('trainingCompletedDisabledHint', {
+                                  defaultValue:
+                                    'Training is complete — no further submissions allowed',
+                                })
+                              : undefined
                         }
                         onClick={() => handleOpenConfirmSubmit(report)}
                         className="text-sm font-medium px-3.5 py-1.5 h-9 rounded-lg bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1625,7 +1666,7 @@ const getNextReportNumber = useCallback(
                       type="button"
                       size="sm"
                       onClick={() => handleOpenConfirmSubmit(editingReport)}
-                      disabled={isSaving}
+                      disabled={isSaving || isAssignmentNotActive}
                       className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer rounded-lg px-4 w-full sm:w-auto"
                     >
                       <Send className="h-4 w-4" />
@@ -1781,13 +1822,18 @@ const getNextReportNumber = useCallback(
                     selectedReport.status === 'rejected') && (
                     <Button
                       size="sm"
-                      disabled={isTrainingCompleted}
+                      disabled={isTrainingCompleted || isAssignmentNotActive}
                       title={
-                        isTrainingCompleted
-                          ? t('trainingCompletedDisabledHint', {
-                              defaultValue: 'Training is complete — no reports can be submitted',
+                        isAssignmentNotActive
+                          ? t('assignmentNotActiveHint', {
+                              defaultValue: `Training assignment is ${myAssignment?.status} — no reports can be submitted`,
+                              status: myAssignment?.status,
                             })
-                          : undefined
+                          : isTrainingCompleted
+                            ? t('trainingCompletedDisabledHint', {
+                                defaultValue: 'Training is complete — no reports can be submitted',
+                              })
+                            : undefined
                       }
                       onClick={() => handleOpenConfirmSubmit(selectedReport)}
                       className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1849,7 +1895,7 @@ const getNextReportNumber = useCallback(
               type="button"
               size="sm"
               onClick={handleConfirmSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isAssignmentNotActive}
               className="gap-1.5 bg-[#5B50D6] hover:bg-[#4E44C4] text-white cursor-pointer rounded-lg px-4"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}

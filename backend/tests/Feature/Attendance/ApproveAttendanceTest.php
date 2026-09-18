@@ -356,4 +356,84 @@ class ApproveAttendanceTest extends TestCase
             ->assertJsonPath('data.approval_status', 'approved')
             ->assertJsonPath('data.approved_by', $coordinator->id);
     }
+
+    public function test_approving_an_already_approved_record_returns_422(): void
+    {
+        $supervisor = $this->createAcademicSupervisorUser();
+        [$repUser, $company] = $this->createRepUser();
+        [$assignment] = $this->makeAssignment($company, academicSupervisor: $supervisor);
+
+        $record = AttendanceRecord::create([
+            'training_assignment_id' => $assignment->id,
+            'attendance_date' => now()->subDay()->toDateString(),
+            'status' => 'present',
+            'approval_status' => 'approved',
+            'recorded_by' => $repUser->id,
+            'approved_by' => $supervisor->id,
+            'approved_at' => now()->subHour(),
+            'version' => 2,
+        ]);
+
+        $response = $this->actingAs($supervisor, 'sanctum')
+            ->patchJson("/api/v1/attendance-records/{$record->id}/approve");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'attendance_record_not_reviewable');
+    }
+
+    public function test_rejecting_an_already_approved_record_returns_422(): void
+    {
+        $supervisor = $this->createAcademicSupervisorUser();
+        [$repUser, $company] = $this->createRepUser();
+        [$assignment] = $this->makeAssignment($company, academicSupervisor: $supervisor);
+
+        $record = AttendanceRecord::create([
+            'training_assignment_id' => $assignment->id,
+            'attendance_date' => now()->subDay()->toDateString(),
+            'status' => 'present',
+            'approval_status' => 'approved',
+            'recorded_by' => $repUser->id,
+            'approved_by' => $supervisor->id,
+            'approved_at' => now()->subHour(),
+            'version' => 2,
+        ]);
+
+        $response = $this->actingAs($supervisor, 'sanctum')
+            ->patchJson("/api/v1/attendance-records/{$record->id}/reject", [
+                'reason' => 'Trying to flip an already-decided record.',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'attendance_record_not_reviewable');
+
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $record->id,
+            'approval_status' => 'approved',
+        ]);
+    }
+
+    public function test_approving_an_already_rejected_record_returns_422(): void
+    {
+        $supervisor = $this->createAcademicSupervisorUser();
+        [$repUser, $company] = $this->createRepUser();
+        [$assignment] = $this->makeAssignment($company, academicSupervisor: $supervisor);
+
+        $record = AttendanceRecord::create([
+            'training_assignment_id' => $assignment->id,
+            'attendance_date' => now()->subDay()->toDateString(),
+            'status' => 'absent',
+            'approval_status' => 'rejected',
+            'reason' => 'Originally rejected.',
+            'recorded_by' => $repUser->id,
+            'approved_by' => $supervisor->id,
+            'approved_at' => now()->subHour(),
+            'version' => 2,
+        ]);
+
+        $response = $this->actingAs($supervisor, 'sanctum')
+            ->patchJson("/api/v1/attendance-records/{$record->id}/approve");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'attendance_record_not_reviewable');
+    }
 }

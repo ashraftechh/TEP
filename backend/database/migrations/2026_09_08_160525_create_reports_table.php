@@ -34,6 +34,11 @@ return new class extends Migration
             $table->index(['training_assignment_id', 'status']);
             $table->index(['training_assignment_id', 'report_type_id']);
             $table->index('due_at');
+
+            $table->unique(
+                ['training_assignment_id', 'report_type_id', 'report_number'],
+                'reports_assignment_type_number_unique'
+            );
         });
     }
 

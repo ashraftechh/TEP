@@ -9,6 +9,7 @@ return [
     'rejected_successfully' => 'Attendance record rejected successfully.',
     'already_recorded' => 'Attendance has already been recorded for this student on the selected date.',
     'assignment_not_active' => 'Cannot record attendance. The training placement is not active.',
+    'not_reviewable' => 'This attendance record has already been decided and cannot be reviewed again.',
 
     'status' => [
         'present' => 'Present',

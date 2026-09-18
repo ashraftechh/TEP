@@ -63,6 +63,7 @@ export interface TrainingAssignmentItem {
   field_supervisor_id: number | null;
   training_coordinator_id: number | null;
   status: TrainingAssignmentStatus;
+  is_current: boolean;
   start_date: string | null;
   end_date: string | null;
   progress_percentage: number;

@@ -33,6 +33,7 @@ class TrainingAssignmentResource extends JsonResource
             'field_supervisor_id' => $assignment->field_supervisor_id,
             'training_coordinator_id' => $assignment->training_coordinator_id,
             'status' => $assignment->status,
+            'is_current' => (bool) $assignment->is_current,
             'start_date' => $assignment->start_date?->toDateString(),
             'end_date' => $assignment->end_date?->toDateString(),
             'progress_percentage' => $assignment->progress_percentage,

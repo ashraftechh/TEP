@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import {
   fetchTrainingAssignments,
   fetchMyTrainingAssignment,
+  fetchMyTrainingAssignmentHistory,
   clearTrainingAssignments,
   clearMyTrainingAssignment,
 } from '@/store/slices/trainingAssignmentSlice';
@@ -1579,11 +1580,14 @@ function MyPlacementView() {
     isFetchingMyAssignment,
     fetchMyAssignmentError,
     fetchMyAssignmentErrorCode,
+    assignmentHistory,
+    isFetchingHistory,
   } = useAppSelector((state) => state.trainingAssignment);
   const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchMyTrainingAssignment());
+    dispatch(fetchMyTrainingAssignmentHistory());
     return () => {
       dispatch(clearMyTrainingAssignment());
     };
@@ -1754,6 +1758,45 @@ function MyPlacementView() {
       {/* Student Attendance History */}
       {!isFetchingMyAssignment && myAssignment && myAssignment.status === 'active' && (
         <StudentAttendanceView assignmentId={myAssignment.id} />
+      )}
+
+      {/* Previous Placements — earlier completed/terminated assignments,
+          kept visible separately from the current one above. */}
+      {isFetchingHistory && (
+        <div className="flex items-center justify-center py-8 text-foreground-muted gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{t('loading')}</span>
+        </div>
+      )}
+      {!isFetchingHistory && assignmentHistory.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground tracking-tight">
+            {t('previousPlacements.title', { defaultValue: 'Previous Placements' })}
+          </h2>
+          {assignmentHistory.map((assignment) => (
+            <Card key={assignment.id} className="border-border/60 shadow-sm">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-medium text-sm text-foreground">
+                        {resolveText(assignment.opportunity?.title, language) ||
+                          t('trainingProgram', { defaultValue: 'Training Program' })}
+                      </h3>
+                      <StatusBadge status={assignment.status} />
+                    </div>
+                    <p className="text-xs text-foreground-muted mt-0.5">
+                      {resolveText(assignment.company?.name, language) || '—'}
+                    </p>
+                  </div>
+                  <div className="text-xs text-foreground-muted shrink-0">
+                    {assignment.start_date ?? '—'} — {assignment.end_date ?? '—'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Send Message Dialog for student contacting supervisor */}

@@ -103,6 +103,8 @@
 
   "finalReportAlreadyCreated": "Already created",
   "trainingCompletedDisabledHint": "Training is complete — no new reports can be created or submitted",
+  "assignmentNotActiveHint": "Training assignment is {{status}} — no further reports can be created or submitted",
+  "assignmentNotActiveNotice": "Training assignment is {{status}} — no further reports can be created, edited, or submitted.",
   "trainingCompleted": {
     "title": "Training Complete 🎓",
     "description": "Your final report has been approved. Your training is complete and no further reports can be created or submitted."
@@ -155,6 +157,10 @@
       "allStatuses": "All Statuses",
       "allCompanies": "All Companies",
       "allOpportunities": "All Opportunities",
+      "allPlacements": "All Placements",
+      "past": "past",
+      "includeHistory": "Include past placements",
+      "includeHistoryHint": "Include reports from past (completed/terminated) placements too",
       "typeLabel": "Report Type",
       "statusLabel": "Status"
     },

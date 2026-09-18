@@ -56,6 +56,7 @@ export interface ReportReviewRecord {
 export interface ReportItem {
   id: number;
   training_assignment_id: number;
+  is_current_assignment?: boolean;
   student?: ReportStudentInfo | null;
   opportunity?: {
     id: number;

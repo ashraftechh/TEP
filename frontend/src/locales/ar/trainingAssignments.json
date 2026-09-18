@@ -5,6 +5,10 @@
   "supervisorSubtitle": "متابعة وإدارة الطلاب المشرف عليهم في التدريب التعاوني",
   "myPlacementTitle": "تدريبي الحالي",
   "myPlacementSubtitle": "تفاصيل تدريبك التعاوني الحالي",
+  "trainingProgram": "برنامج التدريب",
+  "previousPlacements": {
+    "title": "التدريبات السابقة"
+  },
   "totalStudents": "إجمالي الطلاب",
   "activeStudents": "طلاب نشطين",
   "completedStudents": "طلاب مكتملين",

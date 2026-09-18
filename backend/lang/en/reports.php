@@ -17,6 +17,8 @@ return [
     'report_type_not_allowed' => 'This report type is not enabled for your training assignment.',
     'report_quota_exceeded' => 'You have reached the maximum allowed number of reports for this type or assignment.',
     'report_sequence_not_met' => 'You must complete and get approval for all :prerequisite_type reports before creating a :type report.',
+    'report_sequence_not_met_same_type' => 'Report #:number of type :type cannot be submitted until report #:previous is approved.',
+    'assignment_not_active' => 'Training assignment is :status — no further reports can be created, edited, or submitted.',
 
     'validation' => [
         'feedback_required' => 'Feedback is required.',

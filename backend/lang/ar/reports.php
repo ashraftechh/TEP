@@ -17,6 +17,8 @@ return [
     'report_type_not_allowed' => 'نوع التقرير هذا غير مفعل لهذا التدريب الميداني.',
     'report_quota_exceeded' => 'لقد وصلت إلى الحد الأقصى المسموح به من التقارير لهذا النوع أو التدريب.',
     'report_sequence_not_met' => 'يجب إكمال جميع تقارير :prerequisite_type واعتمادها قبل إنشاء تقرير :type.',
+    'report_sequence_not_met_same_type' => 'لا يمكن إرسال التقرير رقم :number من نوع :type قبل اعتماد التقرير رقم :previous.',
+    'assignment_not_active' => 'حالة التدريب الميداني :status — لا يمكن إنشاء أو تعديل أو إرسال تقارير جديدة.',
 
     'validation' => [
         'feedback_required' => 'الملاحظات مطلوبة.',

@@ -8,6 +8,7 @@ use App\Actions\Reports\CreateReportAction;
 use App\Actions\Reports\ReviewReportAction;
 use App\Actions\Reports\SubmitReportAction;
 use App\Actions\Reports\UpdateReportAction;
+use App\Exceptions\AssignmentNotActiveException;
 use App\Exceptions\DuplicateReportException;
 use App\Exceptions\NoActiveTrainingAssignmentException;
 use App\Exceptions\ReportNotEditableException;
@@ -45,26 +46,57 @@ class ReportController extends Controller
      * List reports for the authenticated student or assigned academic supervisor.
      *
      * TEP-674/TEP-682/Sprint 4 — GET /api/v1/reports
+     *
+     * Default scoping: both the student branch and the academic-supervisor
+     * branch default to reports belonging to each relevant assignment's
+     * CURRENT one (`training_assignments.is_current = true`) — a student
+     * or supervisor otherwise viewing a mix of an old, already-finished
+     * placement's reports alongside a new one's is confusing and, for
+     * quota/sequence purposes on the student side, actively incorrect.
+     * An explicit `training_assignment_id` overrides this to look at one
+     * specific assignment (current or historical) directly; for the
+     * supervisor branch only, `include_history=1` instead drops the
+     * is_current restriction entirely to browse everything.
      */
     public function index(ListReportsRequest $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
+        $explicitAssignmentId = $request->filled('training_assignment_id')
+            ? (int) $request->input('training_assignment_id')
+            : null;
+        $includeHistory = $request->boolean('include_history');
+
         if ($user->hasPermission('reports.review') && ! $user->hasRole('student')) {
             $query = Report::query()
                 ->whereIn('status', Report::SUBMITTED_STATUSES)
-                ->whereHas('trainingAssignment', function ($q) use ($user) {
+                ->whereHas('trainingAssignment', function ($q) use ($user, $explicitAssignmentId, $includeHistory) {
                     $q->where('academic_supervisor_id', $user->id);
+
+                    if ($explicitAssignmentId !== null) {
+                        $q->where('id', $explicitAssignmentId);
+                    } elseif (! $includeHistory) {
+                        $q->where('is_current', true);
+                    }
                 });
         } elseif ($user->studentProfile !== null) {
             $assignmentIds = TrainingAssignment::query()
                 ->where('student_profile_id', $user->studentProfile->id)
+                ->when(
+                    $explicitAssignmentId !== null,
+                    fn ($q) => $q->where('id', $explicitAssignmentId),
+                    fn ($q) => $q->where('is_current', true)
+                )
                 ->pluck('id');
 
             $query = Report::query()->whereIn('training_assignment_id', $assignmentIds);
         } elseif ($user->hasPermission('training_assignments.view_any')) {
             $query = Report::query();
+
+            if ($explicitAssignmentId !== null) {
+                $query->where('training_assignment_id', $explicitAssignmentId);
+            }
         } else {
             return ReportResource::collection(collect())->response();
         }
@@ -114,17 +146,31 @@ class ReportController extends Controller
             });
         }
 
-        $reports = $query
-            ->with([
-                'reportType',
-                'files',
-                'latestReview',
-                'trainingAssignment.studentProfile.user',
-                'trainingAssignment.opportunity',
-                'trainingAssignment.company',
-            ])
-            ->orderBy('id', 'desc')
-            ->get();
+        $query->with([
+            'reportType',
+            'files',
+            'latestReview',
+            'trainingAssignment.studentProfile.user',
+            'trainingAssignment.opportunity',
+            'trainingAssignment.company',
+        ]);
+
+        // For the reviewer queue specifically, order so reports surface in
+        // sequence order rather than raw insertion recency — otherwise a
+        // supervisor could see report #3 of a type above report #1 simply
+        // because it was submitted more recently.
+        if ($user->hasPermission('reports.review') && ! $user->hasRole('student')) {
+            $reports = $query
+                ->orderBy('training_assignment_id')
+                ->orderBy('report_type_id')
+                ->orderBy('report_number')
+                ->orderByRaw('due_at IS NULL')
+                ->orderBy('due_at')
+                ->orderBy('id')
+                ->get();
+        } else {
+            $reports = $query->orderBy('id', 'desc')->get();
+        }
 
         return ReportResource::collection($reports)->response();
     }
@@ -208,6 +254,46 @@ class ReportController extends Controller
                 'message' => __('reports.not_editable'),
                 'error_code' => 'report_not_editable',
             ], 422);
+        } catch (AssignmentNotActiveException $e) {
+            return response()->json([
+                'message' => __('reports.assignment_not_active', ['status' => $e->status]),
+                'error_code' => 'assignment_not_active',
+            ], 422);
+        } catch (TrainingCompletedException) {
+            return response()->json([
+                'message' => __('reports.training_completed'),
+                'error_code' => 'training_completed',
+            ], 422);
+        } catch (ReportTypeNotAllowedException) {
+            return response()->json([
+                'message' => __('reports.report_type_not_allowed'),
+                'error_code' => 'report_type_not_allowed',
+            ], 422);
+        } catch (ReportQuotaExceededException) {
+            return response()->json([
+                'message' => __('reports.report_quota_exceeded'),
+                'error_code' => 'report_quota_exceeded',
+            ], 422);
+        } catch (ReportSequenceNotMetException $e) {
+            return response()->json([
+                'message' => __('reports.report_sequence_not_met', [
+                    'prerequisite_type' => ReportType::where('code', $e->prerequisiteType)->first()?->name ?? $e->prerequisiteType,
+                    'type' => ReportType::where('code', $e->typeCode)->first()?->name ?? $e->typeCode,
+                ]),
+                'error_code' => 'report_sequence_not_met',
+                'meta' => [
+                    'prerequisite_type' => $e->prerequisiteType,
+                    'required' => $e->required,
+                    'approved' => $e->approved,
+                ],
+            ], 422);
+        } catch (DuplicateReportException $e) {
+            $isFinal = $e->errorCode === 'duplicate_final_report';
+
+            return response()->json([
+                'message' => $isFinal ? __('reports.duplicate_final_report') : __('reports.duplicate_report'),
+                'error_code' => $e->errorCode,
+            ], 409);
         }
 
         $report->load(['reportType', 'files', 'latestReview']);
@@ -233,6 +319,24 @@ class ReportController extends Controller
             return response()->json([
                 'message' => __('reports.training_completed'),
                 'error_code' => 'training_completed',
+            ], 422);
+        } catch (AssignmentNotActiveException $e) {
+            return response()->json([
+                'message' => __('reports.assignment_not_active', ['status' => $e->status]),
+                'error_code' => 'assignment_not_active',
+            ], 422);
+        } catch (ReportSequenceNotMetException $e) {
+            return response()->json([
+                'message' => __('reports.report_sequence_not_met_same_type', [
+                    'number' => $e->reportNumber,
+                    'previous' => ((int) $e->reportNumber) - 1,
+                    'type' => ReportType::where('code', $e->typeCode)->first()?->name ?? $e->typeCode,
+                ]),
+                'error_code' => 'report_sequence_not_met_same_type',
+                'meta' => [
+                    'report_type_id' => $e->reportTypeId,
+                    'report_number' => $e->reportNumber,
+                ],
             ], 422);
         } catch (ReportNotSubmittableException) {
             return response()->json([

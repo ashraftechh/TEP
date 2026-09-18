@@ -23,6 +23,13 @@ class ReportResource extends JsonResource
         return [
             'id' => $this->id,
             'training_assignment_id' => $this->training_assignment_id,
+            // Lets a client (e.g. the supervisor's "include past placements"
+            // toggle) tell whether this report belongs to the assignment
+            // currently marked as the student's active/current one.
+            'is_current_assignment' => $this->whenLoaded(
+                'trainingAssignment',
+                fn () => (bool) $this->trainingAssignment?->is_current
+            ),
             'student' => $this->whenLoaded('trainingAssignment', function () {
                 $profile = $this->trainingAssignment->studentProfile;
                 if (! $profile) {

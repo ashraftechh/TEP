@@ -24,6 +24,7 @@ return new class extends Migration
             $table->foreignId('training_coordinator_id')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('status', ['active', 'suspended', 'completed', 'terminated'])
                 ->default('active');
+            $table->boolean('is_current')->default(true);
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->unsignedTinyInteger('progress_percentage')->default(0);
@@ -38,6 +39,7 @@ return new class extends Migration
             $table->index('status');
             $table->index('academic_supervisor_id');
             $table->index('company_id');
+            $table->index(['student_profile_id', 'is_current']);
         });
     }
 

@@ -338,6 +338,12 @@ Route::middleware('auth:sanctum')->prefix('my')->group(function () {
     Route::get('/training-assignment', [TrainingAssignmentController::class, 'myTrainingAssignment'])
         ->middleware('permission:training_assignments.own.view')
         ->name('my.training-assignment.show');
+
+    // Placement history — TEP fix: previous (non-current) assignments for
+    // the authenticated student, for a "previous placements" screen.
+    Route::get('/training-assignments/history', [TrainingAssignmentController::class, 'myTrainingAssignmentHistory'])
+        ->middleware('permission:training_assignments.own.view')
+        ->name('my.training-assignments.history');
 });
 
 // Attendance records management — TEP-692, TEP-693, TEP-694

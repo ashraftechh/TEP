@@ -611,4 +611,129 @@ class CreateTrainingAssignmentTest extends TestCase
             'required_reports_count' => 11,
         ]);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Application-withdrawal fix + is_current
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function test_creating_a_new_assignment_does_not_withdraw_the_application_behind_a_prior_completed_assignment(): void
+    {
+        $coordinator = $this->createCoordinatorUser();
+        [$repUser1, $company1] = $this->createRepUser();
+        $opportunity1 = $this->createOpportunity($company1);
+        [, $studentProfile] = $this->createStudentUser();
+        $academicSupervisor = $this->createAcademicSupervisorUser();
+
+        // First placement: application accepted, assignment created and
+        // completed. The application itself is never transitioned away
+        // from 'accepted' by anything in the codebase once converted.
+        $firstApplication = $this->makeApplication($studentProfile, $opportunity1, 'accepted');
+        TrainingAssignment::create([
+            'application_id' => $firstApplication->id,
+            'student_profile_id' => $studentProfile->id,
+            'company_id' => $company1->id,
+            'opportunity_id' => $opportunity1->id,
+            'academic_supervisor_id' => $academicSupervisor->id,
+            'field_supervisor_id' => $repUser1->id,
+            'training_coordinator_id' => $coordinator->id,
+            'status' => 'completed',
+            'is_current' => true,
+            'progress_percentage' => 100,
+            'version' => 1,
+        ]);
+
+        // Second placement, different opportunity: this is the one being
+        // created through the actual endpoint.
+        [$repUser2, $company2] = $this->createRepUser();
+        $opportunity2 = $this->createOpportunity($company2);
+        $secondApplication = $this->makeApplication($studentProfile, $opportunity2, 'accepted');
+
+        $payload = $this->validPayload($secondApplication, $academicSupervisor, $repUser2);
+
+        $response = $this->actingAs($coordinator)
+            ->postJson('/api/v1/training-assignments', $payload);
+
+        $response->assertStatus(201);
+
+        // The first application must remain untouched — it was already
+        // legitimately consumed by the first (now completed) assignment.
+        $this->assertDatabaseHas('applications', [
+            'id' => $firstApplication->id,
+            'status' => 'accepted',
+        ]);
+    }
+
+    public function test_creating_a_new_assignment_still_withdraws_other_never_converted_applications(): void
+    {
+        $coordinator = $this->createCoordinatorUser();
+        [, $company] = $this->createRepUser();
+        $opportunity = $this->createOpportunity($company);
+        [, $studentProfile] = $this->createStudentUser();
+        $academicSupervisor = $this->createAcademicSupervisorUser();
+        $fieldSupervisor = $this->createRepUser($company)[0];
+
+        // A second, competing accepted application for the SAME student
+        // that was never converted into any training assignment.
+        $competingOpportunity = $this->createOpportunity($company);
+        $competingApplication = $this->makeApplication($studentProfile, $competingOpportunity, 'accepted');
+
+        $application = $this->makeApplication($studentProfile, $opportunity, 'accepted');
+        $payload = $this->validPayload($application, $academicSupervisor, $fieldSupervisor);
+
+        $response = $this->actingAs($coordinator)
+            ->postJson('/api/v1/training-assignments', $payload);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseHas('applications', [
+            'id' => $competingApplication->id,
+            'status' => 'withdrawn',
+        ]);
+    }
+
+    public function test_creating_a_new_assignment_marks_it_current_and_unmarks_the_prior_one(): void
+    {
+        $coordinator = $this->createCoordinatorUser();
+        [$repUser1, $company1] = $this->createRepUser();
+        $opportunity1 = $this->createOpportunity($company1);
+        [, $studentProfile] = $this->createStudentUser();
+        $academicSupervisor = $this->createAcademicSupervisorUser();
+
+        $firstApplication = $this->makeApplication($studentProfile, $opportunity1, 'accepted');
+        $priorAssignment = TrainingAssignment::create([
+            'application_id' => $firstApplication->id,
+            'student_profile_id' => $studentProfile->id,
+            'company_id' => $company1->id,
+            'opportunity_id' => $opportunity1->id,
+            'academic_supervisor_id' => $academicSupervisor->id,
+            'field_supervisor_id' => $repUser1->id,
+            'training_coordinator_id' => $coordinator->id,
+            'status' => 'completed',
+            'is_current' => true,
+            'progress_percentage' => 100,
+            'version' => 1,
+        ]);
+
+        [$repUser2, $company2] = $this->createRepUser();
+        $opportunity2 = $this->createOpportunity($company2);
+        $secondApplication = $this->makeApplication($studentProfile, $opportunity2, 'accepted');
+        $payload = $this->validPayload($secondApplication, $academicSupervisor, $repUser2);
+
+        $response = $this->actingAs($coordinator)
+            ->postJson('/api/v1/training-assignments', $payload);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.is_current', true);
+
+        $newAssignmentId = $response->json('data.id');
+
+        $this->assertDatabaseHas('training_assignments', [
+            'id' => $priorAssignment->id,
+            'is_current' => false,
+        ]);
+        $this->assertDatabaseHas('training_assignments', [
+            'id' => $newAssignmentId,
+            'is_current' => true,
+        ]);
+    }
 }

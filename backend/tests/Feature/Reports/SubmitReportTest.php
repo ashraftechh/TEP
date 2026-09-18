@@ -372,4 +372,81 @@ class SubmitReportTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonPath('error_code', 'training_completed');
     }
+
+    public function test_submitting_report_2_fails_when_report_1_is_not_yet_approved(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+
+        // Report #1 exists but is only submitted, not yet approved.
+        $this->makeReport($assignment, status: 'submitted', number: 1);
+        $reportTwo = $this->makeReport($assignment, status: 'draft', number: 2);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->postJson("/api/v1/reports/{$reportTwo->id}/submit");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'report_sequence_not_met_same_type');
+
+        $this->assertDatabaseHas('reports', [
+            'id' => $reportTwo->id,
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_submitting_report_2_succeeds_once_report_1_is_approved(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+
+        $this->makeReport($assignment, status: 'approved', number: 1);
+        $reportTwo = $this->makeReport($assignment, status: 'draft', number: 2);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->postJson("/api/v1/reports/{$reportTwo->id}/submit");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.status', 'submitted');
+    }
+
+    public function test_submitting_report_1_is_never_blocked_by_the_same_type_gate(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $reportOne = $this->makeReport($assignment, status: 'draft', number: 1);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->postJson("/api/v1/reports/{$reportOne->id}/submit");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.status', 'submitted');
+    }
+
+    public function test_submitting_a_report_on_a_suspended_assignment_returns_422(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $assignment->update(['status' => 'suspended']);
+        $report = $this->makeReport($assignment, status: 'draft', number: 1);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->postJson("/api/v1/reports/{$report->id}/submit");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'assignment_not_active');
+
+        $this->assertDatabaseHas('reports', [
+            'id' => $report->id,
+            'status' => 'draft',
+        ]);
+    }
+
+    public function test_submitting_a_report_on_a_terminated_assignment_returns_422(): void
+    {
+        [$assignment, $studentUser] = $this->makeAssignment();
+        $assignment->update(['status' => 'terminated']);
+        $report = $this->makeReport($assignment, status: 'draft', number: 1);
+
+        $response = $this->actingAs($studentUser, 'sanctum')
+            ->postJson("/api/v1/reports/{$report->id}/submit");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error_code', 'assignment_not_active');
+    }
 }

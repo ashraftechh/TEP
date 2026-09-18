@@ -19,6 +19,11 @@ export interface TrainingAssignmentState {
   isFetchingMyAssignment: boolean;
   fetchMyAssignmentError: string | null;
   fetchMyAssignmentErrorCode: string | null;
+
+  // ── Student's OTHER (non-current) placements — "previous placements" ────────
+  assignmentHistory: TrainingAssignmentItem[];
+  isFetchingHistory: boolean;
+  fetchHistoryError: string | null;
 }
 
 const initialState: TrainingAssignmentState = {
@@ -31,6 +36,10 @@ const initialState: TrainingAssignmentState = {
   isFetchingMyAssignment: false,
   fetchMyAssignmentError: null,
   fetchMyAssignmentErrorCode: null,
+
+  assignmentHistory: [],
+  isFetchingHistory: false,
+  fetchHistoryError: null,
 };
 
 /**
@@ -68,13 +77,14 @@ export const fetchTrainingAssignments = createAsyncThunk<
 });
 
 /**
- * Fetch the authenticated student's own single training placement.
+ * Fetch the authenticated student's own CURRENT training placement.
  *
  * TEP-665 — GET /api/v1/my/training-assignment
  * 404 (`no_active_assignment`) is a normal, expected state (student hasn't
- * been assigned yet) — not surfaced as a generic error, so the reducer
- * clears myAssignment to null on that specific error_code rather than
- * leaving fetchMyAssignmentError populated.
+ * been assigned yet, or their most recent placement ended and no new one
+ * has started) — not surfaced as a generic error, so the reducer clears
+ * myAssignment to null on that specific error_code rather than leaving
+ * fetchMyAssignmentError populated.
  */
 export const fetchMyTrainingAssignment = createAsyncThunk<
   TrainingAssignmentItem | null,
@@ -99,6 +109,35 @@ export const fetchMyTrainingAssignment = createAsyncThunk<
       return rejectWithValue({
         message: err.response.data?.message || 'Failed to load your training placement',
         errorCode,
+      });
+    }
+    return rejectWithValue({
+      message: err instanceof Error ? err.message : 'Unknown error occurred',
+    });
+  }
+});
+
+/**
+ * Fetch the authenticated student's OTHER (non-current) training
+ * placements — their history, for a "previous placements" screen.
+ *
+ * GET /api/v1/my/training-assignments/history
+ */
+export const fetchMyTrainingAssignmentHistory = createAsyncThunk<
+  TrainingAssignmentItem[],
+  void,
+  { rejectValue: { message: string } }
+>('trainingAssignment/fetchMyTrainingAssignmentHistory', async (_, { rejectWithValue }) => {
+  try {
+    const response = await api.get<{ data: TrainingAssignmentItem[] }>(
+      '/my/training-assignments/history'
+    );
+
+    return response.data.data ?? [];
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err) && err.response) {
+      return rejectWithValue({
+        message: err.response.data?.message || 'Failed to load your placement history',
       });
     }
     return rejectWithValue({
@@ -163,6 +202,21 @@ export const trainingAssignmentSlice = createSlice({
           action.payload?.message ?? 'Failed to load your training placement';
       }
       state.fetchMyAssignmentErrorCode = action.payload?.errorCode ?? null;
+    });
+
+    // fetchMyTrainingAssignmentHistory
+    builder.addCase(fetchMyTrainingAssignmentHistory.pending, (state) => {
+      state.isFetchingHistory = true;
+      state.fetchHistoryError = null;
+    });
+    builder.addCase(fetchMyTrainingAssignmentHistory.fulfilled, (state, action) => {
+      state.isFetchingHistory = false;
+      state.assignmentHistory = action.payload;
+      state.fetchHistoryError = null;
+    });
+    builder.addCase(fetchMyTrainingAssignmentHistory.rejected, (state, action) => {
+      state.isFetchingHistory = false;
+      state.fetchHistoryError = action.payload?.message ?? 'Failed to load your placement history';
     });
   },
 });

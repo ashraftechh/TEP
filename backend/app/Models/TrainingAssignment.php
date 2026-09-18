@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'field_supervisor_id',
     'training_coordinator_id',
     'status',
+    'is_current',
     'start_date',
     'end_date',
     'progress_percentage',
@@ -102,6 +103,7 @@ class TrainingAssignment extends Model
             'required_reports_count' => 'integer',
             'report_configuration' => 'array',
             'version' => 'integer',
+            'is_current' => 'boolean',
         ];
     }
 

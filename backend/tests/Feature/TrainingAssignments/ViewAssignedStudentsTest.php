@@ -498,4 +498,58 @@ class ViewAssignedStudentsTest extends TestCase
 
         $response->assertStatus(401);
     }
+
+    public function test_my_training_assignment_returns_the_current_one_not_the_oldest(): void
+    {
+        $company = Company::factory()->approved()->create();
+        $scenario = $this->makeScenario($company);
+        $studentUser = $scenario['studentUser'];
+        $studentProfile = $scenario['studentProfile'];
+        $oldAssignment = $scenario['assignment'];
+        $oldAssignment->update(['status' => 'completed', 'is_current' => false]);
+
+        // A second, later application/assignment for the SAME student —
+        // this is the one that should come back as "current".
+        $opportunity2 = $this->createOpportunity($company);
+        $application2 = $this->makeApplication($studentProfile, $opportunity2);
+        $currentAssignment = $this->makeAssignment(
+            $application2,
+            $studentProfile,
+            $company,
+            $opportunity2,
+            overrides: ['is_current' => true],
+        );
+
+        $response = $this->actingAs($studentUser)->getJson('/api/v1/my/training-assignment');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.id', $currentAssignment->id)
+            ->assertJsonPath('data.is_current', true);
+    }
+
+    public function test_student_can_fetch_their_training_assignment_history(): void
+    {
+        $company = Company::factory()->approved()->create();
+        $scenario = $this->makeScenario($company);
+        $studentUser = $scenario['studentUser'];
+        $studentProfile = $scenario['studentProfile'];
+        $oldAssignment = $scenario['assignment'];
+        $oldAssignment->update(['status' => 'completed', 'is_current' => false]);
+
+        $opportunity2 = $this->createOpportunity($company);
+        $application2 = $this->makeApplication($studentProfile, $opportunity2);
+        $this->makeAssignment(
+            $application2,
+            $studentProfile,
+            $company,
+            $opportunity2,
+            overrides: ['is_current' => true],
+        );
+
+        $response = $this->actingAs($studentUser)->getJson('/api/v1/my/training-assignments/history');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $oldAssignment->id);
+    }
 }

@@ -102,6 +102,8 @@
 
   "finalReportAlreadyCreated": "تم إنشاؤه مسبقاً",
   "trainingCompletedDisabledHint": "اكتمل التدريب — لا يمكن إنشاء تقارير جديدة أو إرسالها",
+  "assignmentNotActiveHint": "حالة التدريب الميداني {{status}} — لا يمكن إنشاء أو إرسال تقارير جديدة",
+  "assignmentNotActiveNotice": "حالة التدريب الميداني {{status}} — لا يمكن إنشاء أو تعديل أو إرسال تقارير جديدة.",
   "trainingCompleted": {
     "title": "اكتمل التدريب بنجاح 🎓",
     "description": "تم اعتماد تقريرك النهائي بنجاح. لقد انتهت فترة تدريبك ولا يمكن إنشاء تقارير جديدة أو إرسالها."
@@ -154,6 +156,10 @@
       "allStatuses": "جميع الحالات",
       "allCompanies": "جميع الشركات",
       "allOpportunities": "جميع الفرص التدريبية",
+      "allPlacements": "جميع التدريبات",
+      "past": "سابق",
+      "includeHistory": "تضمين التدريبات السابقة",
+      "includeHistoryHint": "تضمين تقارير التدريبات السابقة (المكتملة أو المنهاة) أيضًا",
       "typeLabel": "نوع التقرير",
       "statusLabel": "الحالة"
     },

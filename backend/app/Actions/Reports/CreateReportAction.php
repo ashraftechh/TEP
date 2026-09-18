@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Reports;
 
-use App\Exceptions\DuplicateReportException;
+use App\Actions\Reports\Concerns\ReportPlacementValidator;
 use App\Exceptions\NoActiveTrainingAssignmentException;
-use App\Exceptions\ReportQuotaExceededException;
-use App\Exceptions\ReportSequenceNotMetException;
-use App\Exceptions\ReportTypeNotAllowedException;
-use App\Exceptions\TrainingCompletedException;
 use App\Models\File;
 use App\Models\Report;
 use App\Models\ReportType;
@@ -25,13 +21,24 @@ use Illuminate\Support\Facades\DB;
  * then run the duplicate check + insert inside a single DB transaction
  * with `lockForUpdate()` to prevent a race between two concurrent
  * requests creating the same (assignment, type, number) report twice.
- * No DB-level unique constraint backs this (the `reports` migration only
- * indexes the pair for lookup speed) — same reliance on the
- * transaction-level check alone as the existing attendance-records flow,
- * kept consistent rather than introducing a new pattern for this ticket.
+ * No DB-level unique constraint backs this alone (see the new
+ * add_unique_constraint_to_reports_table migration for the DB-level
+ * backstop) — this transaction-level check is the primary guard.
+ *
+ * The actual placement checks (type-enabled, sequence threshold, quota,
+ * duplicate) live in ReportPlacementValidator, shared with
+ * UpdateReportAction so a PATCH that changes report_type_id/report_number
+ * is held to the exact same rules as creation.
  */
 class CreateReportAction
 {
+    private readonly ReportPlacementValidator $placementValidator;
+
+    public function __construct()
+    {
+        $this->placementValidator = new ReportPlacementValidator;
+    }
+
     /**
      * @param array{
      *     report_type_id: int,
@@ -60,120 +67,18 @@ class CreateReportAction
         }
 
         return DB::transaction(function () use ($assignment, $data) {
-            // Block all report creation once the final report has been approved
-            // (training is considered complete at that point).
-            $hasApprovedFinal = Report::query()
-                ->where('training_assignment_id', $assignment->id)
-                ->where('status', 'approved')
-                ->whereHas('reportType', fn ($q) => $q->where('code', 'final'))
-                ->lockForUpdate()
-                ->exists();
+            $reportTypeId = (int) $data['report_type_id'];
+            $reportNumber = (int) $data['report_number'];
 
-            if ($hasApprovedFinal) {
-                throw TrainingCompletedException::forAssignment($assignment->id);
+            // Normalise report_number for final reports — always 1 — before
+            // validating, same as the pre-extraction inline logic did.
+            $reportTypeCode = ReportType::find($reportTypeId)?->code;
+            if ($reportTypeCode === 'final') {
+                $reportNumber = 1;
+                $data['report_number'] = 1;
             }
 
-            $reportType = ReportType::find($data['report_type_id']);
-
-            if ($reportType !== null) {
-                // For the final report type, check for an existing entry FIRST so
-                // we surface the semantic 409 duplicate_final_report rather than
-                // the 422 quota_exceeded (both would fire because max_count=1).
-                if ($reportType->code === 'final') {
-                    $finalExists = Report::query()
-                        ->where('training_assignment_id', $assignment->id)
-                        ->where('report_type_id', $reportType->id)
-                        ->lockForUpdate()
-                        ->exists();
-
-                    if ($finalExists) {
-                        throw DuplicateReportException::forFinalReport($assignment->id);
-                    }
-
-                    // Normalise report_number for final reports — always 1.
-                    $data['report_number'] = 1;
-                }
-
-                // Check if this report type is enabled for this assignment
-                if (! $assignment->isReportTypeEnabled($reportType->code)) {
-                    throw ReportTypeNotAllowedException::forType($reportType->code, $assignment->id);
-                }
-
-                // Enforce reporting-tier sequence: this type's nearest enabled
-                // prerequisite tier (daily -> weekly -> monthly -> final) must
-                // have enough approved reports before this one can be created.
-                $prereqType = $assignment->getPrerequisiteReportType($reportType->code);
-                if ($prereqType !== null) {
-                    $threshold = $assignment->getSequentialThreshold(
-                        $reportType->code,
-                        (int) $data['report_number']
-                    );
-
-                    if ($threshold !== null) {
-                        $approvedPrereqCount = Report::query()
-                            ->where('training_assignment_id', $assignment->id)
-                            ->whereHas('reportType', fn ($q) => $q->where('code', $prereqType))
-                            ->where('status', 'approved')
-                            ->lockForUpdate()
-                            ->count();
-
-                        if ($approvedPrereqCount < $threshold) {
-                            throw ReportSequenceNotMetException::forType(
-                                $reportType->code,
-                                $prereqType,
-                                $threshold,
-                                $approvedPrereqCount,
-                                $assignment->id
-                            );
-                        }
-                    }
-                }
-
-                // Check maximum allowed count for this specific report type
-                $maxTypeCount = $assignment->getReportTypeMaxCount($reportType->code);
-                if ($maxTypeCount !== null) {
-                    $existingTypeCount = Report::query()
-                        ->where('training_assignment_id', $assignment->id)
-                        ->where('report_type_id', $reportType->id)
-                        ->lockForUpdate()
-                        ->count();
-
-                    if ($existingTypeCount >= $maxTypeCount) {
-                        throw ReportQuotaExceededException::forType($reportType->code, $maxTypeCount, $assignment->id);
-                    }
-
-                    if ((int) $data['report_number'] > $maxTypeCount) {
-                        throw ReportQuotaExceededException::forType($reportType->code, $maxTypeCount, $assignment->id);
-                    }
-                }
-            }
-
-            // Check overall required_reports_count ceiling if configured
-            if ($assignment->required_reports_count !== null && $assignment->required_reports_count > 0) {
-                $existingTotalCount = Report::query()
-                    ->where('training_assignment_id', $assignment->id)
-                    ->lockForUpdate()
-                    ->count();
-
-                if ($existingTotalCount >= $assignment->required_reports_count) {
-                    throw ReportQuotaExceededException::forTotal($assignment->required_reports_count, $assignment->id);
-                }
-            }
-
-            $duplicateExists = Report::query()
-                ->where('training_assignment_id', $assignment->id)
-                ->where('report_type_id', $data['report_type_id'])
-                ->where('report_number', $data['report_number'])
-                ->lockForUpdate()
-                ->exists();
-
-            if ($duplicateExists) {
-                throw DuplicateReportException::forAssignmentTypeAndNumber(
-                    $assignment->id,
-                    (int) $data['report_type_id'],
-                    (int) $data['report_number']
-                );
-            }
+            $this->placementValidator->validate($assignment, $reportTypeId, $reportNumber);
 
             $report = Report::create([
                 'training_assignment_id' => $assignment->id,

@@ -270,9 +270,20 @@ class TrainingAssignmentController extends Controller
      * TEP-665 — GET /api/v1/my/training-assignment
      * Permission `training_assignments.own.view` + a student profile,
      * enforced in MyTrainingAssignmentRequest::authorize(). Returns 404
-     * (not an empty 200) when the student has no assignment yet — there is
-     * nothing to render, and the frontend distinguishes "not started yet"
-     * from a real error using the `error_code`.
+     * (not an empty 200) when the student has no CURRENT assignment —
+     * there is nothing to render, and the frontend distinguishes "not
+     * started yet" from a real error using the `error_code`.
+     *
+     * Filters on `is_current = true` rather than an unordered `first()` —
+     * a student can accumulate more than one training_assignments row
+     * over time (e.g. a completed placement, then a new active one), and
+     * an unordered fetch has no guarantee of returning the right one. See
+     * the add_is_current_to_training_assignments_table migration and
+     * CreateTrainingAssignmentAction for how `is_current` is maintained.
+     * `->latest('id')` is a defensive tiebreaker only — there should
+     * never be more than one is_current=true row per student given that
+     * invariant, but this guards against a data anomaly returning more
+     * than one row for `first()` to pick from.
      */
     public function myTrainingAssignment(MyTrainingAssignmentRequest $request): JsonResponse
     {
@@ -282,6 +293,8 @@ class TrainingAssignmentController extends Controller
 
         $assignment = $this->baseQuery()
             ->where('student_profile_id', $studentProfile->id)
+            ->where('is_current', true)
+            ->latest('id')
             ->first();
 
         if (! $assignment) {
@@ -292,6 +305,36 @@ class TrainingAssignmentController extends Controller
         }
 
         return (new TrainingAssignmentResource($assignment))
+            ->additional([
+                'message' => __('training_assignments.fetched_successfully'),
+            ])
+            ->response()
+            ->setStatusCode(200);
+    }
+
+    /**
+     * List the authenticated student's OTHER (non-current) training
+     * assignments — their placement history. Informational only: this
+     * powers a "previous placements" screen showing what placements the
+     * student had before their current one; it intentionally does not
+     * change which reports show up anywhere (see ReportController::index()
+     * for that separate, is_current-scoped concern).
+     *
+     * GET /api/v1/my/training-assignments/history
+     */
+    public function myTrainingAssignmentHistory(MyTrainingAssignmentRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $studentProfile = $user->studentProfile;
+
+        $assignments = $this->baseQuery()
+            ->where('student_profile_id', $studentProfile->id)
+            ->where('is_current', false)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return (TrainingAssignmentResource::collection($assignments))
             ->additional([
                 'message' => __('training_assignments.fetched_successfully'),
             ])

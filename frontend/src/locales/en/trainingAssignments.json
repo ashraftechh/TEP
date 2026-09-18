@@ -5,6 +5,10 @@
   "supervisorSubtitle": "Monitor and supervise cooperative training students under your supervision",
   "myPlacementTitle": "My Training Placement",
   "myPlacementSubtitle": "Your current cooperative training assignment",
+  "trainingProgram": "Training Program",
+  "previousPlacements": {
+    "title": "Previous Placements"
+  },
   "totalStudents": "Total Students",
   "activeStudents": "Active Students",
   "completedStudents": "Completed Students",

@@ -510,4 +510,36 @@ class CreateReportTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonPath('error_code', 'report_quota_exceeded');
     }
+
+    public function test_database_unique_constraint_prevents_duplicate_placement(): void
+    {
+        [$assignment] = $this->makeAssignment();
+
+        Report::create([
+            'training_assignment_id' => $assignment->id,
+            'title' => 'Week 1 Report',
+            'report_type_id' => $this->weeklyType->id,
+            'report_number' => 1,
+            'content' => 'First one.',
+            'status' => 'draft',
+            'version' => 0,
+        ]);
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+
+        // Bypasses application-level checks entirely (direct DB insert) to
+        // prove the constraint itself — not just ReportPlacementValidator
+        // — is what ultimately guarantees uniqueness.
+        DB::table('reports')->insert([
+            'training_assignment_id' => $assignment->id,
+            'title' => 'Duplicate Week 1 Report',
+            'report_type_id' => $this->weeklyType->id,
+            'report_number' => 1,
+            'content' => 'Should collide.',
+            'status' => 'draft',
+            'version' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
 }

@@ -14,6 +14,8 @@ export interface FetchReportsParams {
   report_type_id?: number;
   student_id?: number;
   q?: string;
+  training_assignment_id?: number;
+  include_history?: boolean;
 }
 
 export interface ReportState {

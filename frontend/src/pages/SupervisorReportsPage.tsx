@@ -83,6 +83,13 @@ export const SupervisorReportsPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [selectedOpportunity, setSelectedOpportunity] = useState<string>('all');
+  const [selectedAssignment, setSelectedAssignment] = useState<string>('all');
+  // Default view is each student's CURRENT placement only (the backend
+  // defaults to this); toggling this re-fetches everything, current and
+  // historical alike, so a supervisor can look back at a student's past
+  // placement(s) — see the training_assignment_id/is_current default
+  // scoping in ReportController::index().
+  const [includeHistory, setIncludeHistory] = useState(false);
 
   // Review Dialog State
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
@@ -150,11 +157,11 @@ export const SupervisorReportsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    dispatch(fetchReports());
+    dispatch(fetchReports(includeHistory ? { include_history: true } : undefined));
     if (reportTypes.length === 0 && !isLoadingReportTypes) {
       dispatch(fetchReportTypes());
     }
-  }, [dispatch]);
+  }, [dispatch, includeHistory]);
 
   const formatDate = useCallback(
     (dateString?: string | null) => {
@@ -400,6 +407,26 @@ export const SupervisorReportsPage: React.FC = () => {
     );
   }, [reports, resolveLocalizedText]);
 
+  // Distinct placements currently loaded, for the "Placement" filter — only
+  // meaningful (and only rendered) once includeHistory has brought more
+  // than one assignment per student into view; each entry disambiguates
+  // by pairing the student's name with the opportunity title, since a
+  // student can appear under more than one placement.
+  const assignments = useMemo(() => {
+    const seen = new Map<number, { id: number; label: string; isCurrent: boolean }>();
+    reports.forEach((r) => {
+      if (!r.training_assignment_id || seen.has(r.training_assignment_id)) return;
+      const studentName = r.student?.name ?? '';
+      const oppTitle = resolveLocalizedText(r.opportunity?.title);
+      seen.set(r.training_assignment_id, {
+        id: r.training_assignment_id,
+        label: [studentName, oppTitle].filter(Boolean).join(' — '),
+        isCurrent: Boolean(r.is_current_assignment),
+      });
+    });
+    return Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [reports, resolveLocalizedText]);
+
   // Filtered reports
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -438,6 +465,15 @@ export const SupervisorReportsPage: React.FC = () => {
         }
       }
 
+      // Placement filter — isolate one specific assignment's reports
+      // (current or, once includeHistory is on, historical).
+      if (selectedAssignment !== 'all') {
+        const assignmentId = parseInt(selectedAssignment, 10);
+        if (!isNaN(assignmentId) && report.training_assignment_id !== assignmentId) {
+          return false;
+        }
+      }
+
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -460,6 +496,7 @@ export const SupervisorReportsPage: React.FC = () => {
     selectedStatus,
     selectedCompany,
     selectedOpportunity,
+    selectedAssignment,
     searchQuery,
     formatReportTitle,
     resolveLocalizedText,
@@ -695,7 +732,57 @@ export const SupervisorReportsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Report Type Select */}
+            {/* Placement Filter — only worth showing once more than one
+                assignment is actually loaded (i.e. once includeHistory has
+                brought a student's past placement(s) into view, or a
+                supervisor's portfolio spans more than one assignment). */}
+            {assignments.length > 1 && (
+              <div className="w-full sm:w-auto min-w-[200px]">
+                <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+                  <SelectTrigger className="h-10 text-sm cursor-pointer border-0 shadow-none bg-slate-100/80 dark:bg-slate-800/80 rounded-lg px-3">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <History className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <SelectValue
+                        placeholder={t('supervisor.filters.allPlacements', {
+                          defaultValue: 'All Placements',
+                        })}
+                      />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      {t('supervisor.filters.allPlacements', { defaultValue: 'All Placements' })}
+                    </SelectItem>
+                    {assignments.map((a) => (
+                      <SelectItem key={a.id} value={String(a.id)}>
+                        {a.label}
+                        {!a.isCurrent
+                          ? ` (${t('supervisor.filters.past', { defaultValue: 'past' })})`
+                          : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Include-history toggle — default view is each student's
+                current placement only; this brings past placements' reports
+                into the list too (see the includeHistory fetch effect). */}
+            <Button
+              type="button"
+              variant={includeHistory ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setIncludeHistory((v) => !v)}
+              className="h-10 gap-1.5 text-sm shrink-0 cursor-pointer"
+              title={t('supervisor.filters.includeHistoryHint', {
+                defaultValue: 'Include reports from past (completed/terminated) placements too',
+              })}
+            >
+              <History className="w-3.5 h-3.5" />
+              {t('supervisor.filters.includeHistory', { defaultValue: 'Include past placements' })}
+            </Button>
+
             <div className="w-full sm:w-auto min-w-[130px]">
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="h-10 text-sm cursor-pointer border-0 shadow-none bg-slate-100/80 dark:bg-slate-800/80 rounded-lg px-3">

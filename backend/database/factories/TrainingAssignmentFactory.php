@@ -35,6 +35,7 @@ class TrainingAssignmentFactory extends Factory
             'field_supervisor_id' => User::factory(),
             'training_coordinator_id' => User::factory(),
             'status' => 'active',
+            'is_current' => true,
             'start_date' => now()->subMonth()->toDateString(),
             'end_date' => now()->addMonths(2)->toDateString(),
             'progress_percentage' => 25,
@@ -72,5 +73,15 @@ class TrainingAssignmentFactory extends Factory
             'status' => 'terminated',
             'termination_reason' => $reason,
         ]);
+    }
+
+    /**
+     * Marks this assignment as NOT the student's current one — for tests
+     * building a "student has an old placement plus a new current one"
+     * scenario.
+     */
+    public function notCurrent(): static
+    {
+        return $this->state(fn () => ['is_current' => false]);
     }
 }

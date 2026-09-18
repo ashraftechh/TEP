@@ -292,4 +292,189 @@ class ListReportTest extends TestCase
         $response->assertJsonPath('data.0.title', 'Student Submitted Report');
         $response->assertJsonPath('data.0.status', 'submitted');
     }
+
+    public function test_student_only_sees_reports_from_their_current_assignment_by_default(): void
+    {
+        [$user, $profile] = $this->createStudentUser();
+
+        $oldAssignment = $this->createAssignmentFor($profile, status: 'completed');
+        $oldAssignment->update(['is_current' => false]);
+        $currentAssignment = $this->createAssignmentFor($profile, status: 'active');
+        // createAssignmentFor's rows default is_current=true; with two rows
+        // for the same student only the second (current) one should end up
+        // true — reflect that explicitly here since these fixtures bypass
+        // CreateTrainingAssignmentAction's own flip logic.
+        $currentAssignment->update(['is_current' => true]);
+
+        Report::create([
+            'training_assignment_id' => $oldAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Old Placement Report',
+            'report_number' => 1,
+            'content' => 'From the completed placement.',
+            'status' => 'approved',
+            'version' => 1,
+        ]);
+
+        Report::create([
+            'training_assignment_id' => $currentAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Current Placement Report',
+            'report_number' => 1,
+            'content' => 'From the new active placement.',
+            'status' => 'draft',
+            'version' => 1,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/v1/reports')
+            ->assertOk();
+
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.title', 'Current Placement Report');
+    }
+
+    public function test_student_can_view_a_specific_historical_assignments_reports_via_training_assignment_id(): void
+    {
+        [$user, $profile] = $this->createStudentUser();
+
+        $oldAssignment = $this->createAssignmentFor($profile, status: 'completed');
+        $oldAssignment->update(['is_current' => false]);
+        $currentAssignment = $this->createAssignmentFor($profile, status: 'active');
+        $currentAssignment->update(['is_current' => true]);
+
+        Report::create([
+            'training_assignment_id' => $oldAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Old Placement Report',
+            'report_number' => 1,
+            'content' => 'From the completed placement.',
+            'status' => 'approved',
+            'version' => 1,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson("/api/v1/reports?training_assignment_id={$oldAssignment->id}")
+            ->assertOk();
+
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.title', 'Old Placement Report');
+    }
+
+    public function test_supervisor_report_list_defaults_to_students_current_assignment_only(): void
+    {
+        [, $profile] = $this->createStudentUser();
+        $supervisor = $this->createSupervisorUser();
+
+        $oldAssignment = $this->createAssignmentFor($profile, status: 'completed');
+        $oldAssignment->update(['academic_supervisor_id' => $supervisor->id, 'is_current' => false]);
+        $currentAssignment = $this->createAssignmentFor($profile, status: 'active');
+        $currentAssignment->update(['academic_supervisor_id' => $supervisor->id, 'is_current' => true]);
+
+        Report::create([
+            'training_assignment_id' => $oldAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Old Placement Submitted Report',
+            'report_number' => 1,
+            'content' => 'Content.',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'version' => 1,
+        ]);
+
+        Report::create([
+            'training_assignment_id' => $currentAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Current Placement Submitted Report',
+            'report_number' => 1,
+            'content' => 'Content.',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'version' => 1,
+        ]);
+
+        $response = $this->actingAs($supervisor)
+            ->getJson('/api/v1/reports')
+            ->assertOk();
+
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.title', 'Current Placement Submitted Report');
+    }
+
+    public function test_supervisor_can_include_history_to_see_past_placement_reports_too(): void
+    {
+        [, $profile] = $this->createStudentUser();
+        $supervisor = $this->createSupervisorUser();
+
+        $oldAssignment = $this->createAssignmentFor($profile, status: 'completed');
+        $oldAssignment->update(['academic_supervisor_id' => $supervisor->id, 'is_current' => false]);
+        $currentAssignment = $this->createAssignmentFor($profile, status: 'active');
+        $currentAssignment->update(['academic_supervisor_id' => $supervisor->id, 'is_current' => true]);
+
+        Report::create([
+            'training_assignment_id' => $oldAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Old Placement Submitted Report',
+            'report_number' => 1,
+            'content' => 'Content.',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'version' => 1,
+        ]);
+
+        Report::create([
+            'training_assignment_id' => $currentAssignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Current Placement Submitted Report',
+            'report_number' => 1,
+            'content' => 'Content.',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'version' => 1,
+        ]);
+
+        $response = $this->actingAs($supervisor)
+            ->getJson('/api/v1/reports?include_history=1')
+            ->assertOk();
+
+        $response->assertJsonCount(2, 'data');
+    }
+
+    public function test_supervisor_queue_is_ordered_by_assignment_then_type_then_number(): void
+    {
+        [, $profile] = $this->createStudentUser();
+        $supervisor = $this->createSupervisorUser();
+        $assignment = $this->createAssignmentFor($profile, status: 'active');
+        $assignment->update(['academic_supervisor_id' => $supervisor->id]);
+
+        Report::create([
+            'training_assignment_id' => $assignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Weekly Report 3',
+            'report_number' => 3,
+            'content' => 'Content.',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'version' => 1,
+        ]);
+
+        Report::create([
+            'training_assignment_id' => $assignment->id,
+            'report_type_id' => $this->weeklyType->id,
+            'title' => 'Weekly Report 1',
+            'report_number' => 1,
+            'content' => 'Content.',
+            'status' => 'submitted',
+            'submitted_at' => now()->subDay(),
+            'version' => 1,
+        ]);
+
+        $response = $this->actingAs($supervisor)
+            ->getJson('/api/v1/reports')
+            ->assertOk();
+
+        // Sequence order (report_number ascending), not submission recency.
+        $response->assertJsonPath('data.0.title', 'Weekly Report 1');
+        $response->assertJsonPath('data.1.title', 'Weekly Report 3');
+    }
 }

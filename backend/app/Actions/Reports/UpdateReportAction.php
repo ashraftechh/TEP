@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions\Reports;
 
+use App\Actions\Reports\Concerns\ReportPlacementValidator;
+use App\Exceptions\AssignmentNotActiveException;
 use App\Exceptions\ReportNotEditableException;
 use App\Models\File;
 use App\Models\Report;
+use App\Models\ReportType;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,6 +21,21 @@ use Illuminate\Support\Facades\DB;
  * report to be created. Re-checked inside the transaction under
  * `lockForUpdate()` to guard against a concurrent submit/review action
  * changing the status between the initial check and the write.
+ *
+ * If `report_type_id` and/or `report_number` are part of the patch and
+ * either actually changes, the same ReportPlacementValidator that
+ * CreateReportAction runs is re-run against the new pair (excluding this
+ * report's own row from the duplicate check) — without this, a student
+ * could edit a legitimately-created draft into a type/number combination
+ * that would never have been allowed at creation time (wrong type not
+ * enabled, sequence not met, quota exceeded, or a duplicate of another
+ * report), since editing content/title alone previously skipped all of
+ * CreateReportAction's checks entirely.
+ *
+ * Also blocked, for ANY field, once the report's training assignment is
+ * no longer 'active' (suspended/terminated/completed) — a draft left
+ * over from before the assignment ended shouldn't be editable, the same
+ * reasoning that blocks new report creation for a non-active assignment.
  */
 class UpdateReportAction
 {
@@ -33,6 +51,13 @@ class UpdateReportAction
      */
     public const EDITABLE_STATUSES = ['draft', 'revision_requested', 'rejected'];
 
+    private readonly ReportPlacementValidator $placementValidator;
+
+    public function __construct()
+    {
+        $this->placementValidator = new ReportPlacementValidator;
+    }
+
     public function execute(Report $report, array $data): Report
     {
         if (! in_array($report->status, self::EDITABLE_STATUSES, true)) {
@@ -45,6 +70,45 @@ class UpdateReportAction
 
             if (! in_array($locked->status, self::EDITABLE_STATUSES, true)) {
                 throw ReportNotEditableException::forStatus($locked->status);
+            }
+
+            $assignment = $locked->trainingAssignment;
+
+            if ($assignment === null || $assignment->status !== 'active') {
+                throw AssignmentNotActiveException::forAssignment(
+                    $assignment?->id,
+                    $assignment?->status ?? 'unknown',
+                );
+            }
+
+            $newReportTypeId = array_key_exists('report_type_id', $data)
+                ? (int) $data['report_type_id']
+                : (int) $locked->report_type_id;
+
+            $newReportNumber = array_key_exists('report_number', $data)
+                ? (int) $data['report_number']
+                : (int) $locked->report_number;
+
+            // Normalise report_number for final reports — always 1 — same
+            // as CreateReportAction does before validating.
+            $newReportTypeCode = ReportType::find($newReportTypeId)?->code;
+            if ($newReportTypeCode === 'final') {
+                $newReportNumber = 1;
+                if (array_key_exists('report_number', $data)) {
+                    $data['report_number'] = 1;
+                }
+            }
+
+            $typeOrNumberChanged = $newReportTypeId !== (int) $locked->report_type_id
+                || $newReportNumber !== (int) $locked->report_number;
+
+            if ($typeOrNumberChanged) {
+                $this->placementValidator->validate(
+                    $assignment,
+                    $newReportTypeId,
+                    $newReportNumber,
+                    ignoreReportId: $locked->id,
+                );
             }
 
             $locked->fill(array_intersect_key($data, array_flip([

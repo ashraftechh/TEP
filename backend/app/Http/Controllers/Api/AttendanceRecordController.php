@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Attendance\ApproveAttendanceRecordAction;
 use App\Actions\Attendance\RecordAttendanceAction;
 use App\Actions\Attendance\RejectAttendanceRecordAction;
+use App\Exceptions\AttendanceRecordNotReviewableException;
 use App\Exceptions\DuplicateAttendanceRecordException;
 use App\Exceptions\InvalidAttendanceAssignmentStatusException;
 use App\Http\Controllers\Controller;
@@ -144,10 +145,17 @@ class AttendanceRecordController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $record = $this->approveAttendanceRecordAction->execute(
-            record: $attendanceRecord,
-            actor: $user
-        );
+        try {
+            $record = $this->approveAttendanceRecordAction->execute(
+                record: $attendanceRecord,
+                actor: $user
+            );
+        } catch (AttendanceRecordNotReviewableException) {
+            return response()->json([
+                'message' => __('attendance.not_reviewable'),
+                'error_code' => 'attendance_record_not_reviewable',
+            ], 422);
+        }
 
         $record->load(['recordedBy', 'approvedBy']);
 
@@ -171,11 +179,18 @@ class AttendanceRecordController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $record = $this->rejectAttendanceRecordAction->execute(
-            record: $attendanceRecord,
-            reason: (string) $request->validated('reason'),
-            actor: $user
-        );
+        try {
+            $record = $this->rejectAttendanceRecordAction->execute(
+                record: $attendanceRecord,
+                reason: (string) $request->validated('reason'),
+                actor: $user
+            );
+        } catch (AttendanceRecordNotReviewableException) {
+            return response()->json([
+                'message' => __('attendance.not_reviewable'),
+                'error_code' => 'attendance_record_not_reviewable',
+            ], 422);
+        }
 
         $record->load(['recordedBy', 'approvedBy']);
 

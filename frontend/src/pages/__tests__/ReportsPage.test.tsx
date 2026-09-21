@@ -146,6 +146,11 @@ describe('ReportsPage', () => {
     expect(screen.getByRole('heading', { name: /Weekly Report 1/i })).toBeInTheDocument();
   });
 
+  it('renders translated active badge for current training placement', () => {
+    renderComponent();
+    expect(screen.getByText(/^(نشط|Active)$/)).toBeInTheDocument();
+  });
+
   it('opens create report dialog when clicking create button', async () => {
     renderComponent();
     const createBtn = screen.getByRole('button', { name: /إنشاء تقرير جديد|Create New Report/i });

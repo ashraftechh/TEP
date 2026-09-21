@@ -132,7 +132,11 @@
     "approved": "Approved",
     "revision_requested": "Revision Requested",
     "rejected": "Rejected",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "active": "Active",
+    "suspended": "Suspended",
+    "completed": "Completed",
+    "terminated": "Terminated"
   },
 
   "all": "All",

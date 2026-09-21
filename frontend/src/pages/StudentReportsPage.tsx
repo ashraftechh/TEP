@@ -174,7 +174,7 @@ function FeedbackNote({
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const StudentReportsPage: React.FC = () => {
-  const { t, i18n } = useTranslation(['reports', 'common']);
+  const { t, i18n } = useTranslation(['reports', 'trainingAssignments', 'common']);
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const dispatch = useAppDispatch();
@@ -652,6 +652,15 @@ export const StudentReportsPage: React.FC = () => {
   // status, which a coordinator can set independently of that).
   const isAssignmentNotActive = Boolean(myAssignment) && myAssignment?.status !== 'active';
 
+  const assignmentStatusLabel = useMemo(() => {
+    if (!myAssignment?.status) return '';
+    return t(`status.${myAssignment.status}`, {
+      defaultValue: t(`trainingAssignments:status.${myAssignment.status}`, {
+        defaultValue: myAssignment.status,
+      }),
+    });
+  }, [myAssignment?.status, t]);
+
   const getNextReportNumber = useCallback(
     (typeId?: string | number): string => {
       if (!typeId) return '1';
@@ -982,8 +991,8 @@ export const StudentReportsPage: React.FC = () => {
               ? t('noActiveAssignmentNotice', { defaultValue: 'No active training placement' })
               : isAssignmentNotActive
                 ? t('assignmentNotActiveHint', {
-                    defaultValue: `Training assignment is ${myAssignment?.status} — no further reports can be created`,
-                    status: myAssignment?.status,
+                    defaultValue: `Training assignment is ${assignmentStatusLabel} — no further reports can be created`,
+                    status: assignmentStatusLabel,
                   })
                 : isTrainingCompleted
                   ? t('trainingCompletedDisabledHint', {
@@ -1025,7 +1034,7 @@ export const StudentReportsPage: React.FC = () => {
                           : 'text-xs font-normal border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
                       }
                     >
-                      {t(`status.${myAssignment.status}`, myAssignment.status)}
+                      {assignmentStatusLabel}
                     </Badge>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5">
@@ -1078,8 +1087,8 @@ export const StudentReportsPage: React.FC = () => {
           <AlertCircle className="h-5 w-5 shrink-0" />
           <span>
             {t('assignmentNotActiveNotice', {
-              defaultValue: `Training assignment is ${myAssignment?.status} — no further reports can be created, edited, or submitted.`,
-              status: myAssignment?.status,
+              defaultValue: `Training assignment is ${assignmentStatusLabel} — no further reports can be created, edited, or submitted.`,
+              status: assignmentStatusLabel,
             })}
           </span>
         </div>
@@ -1334,8 +1343,8 @@ export const StudentReportsPage: React.FC = () => {
                         title={
                           isAssignmentNotActive
                             ? t('assignmentNotActiveHint', {
-                                defaultValue: `Training assignment is ${myAssignment?.status} — no further submissions allowed`,
-                                status: myAssignment?.status,
+                                defaultValue: `Training assignment is ${assignmentStatusLabel} — no further submissions allowed`,
+                                status: assignmentStatusLabel,
                               })
                             : isTrainingCompleted
                               ? t('trainingCompletedDisabledHint', {

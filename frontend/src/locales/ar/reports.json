@@ -131,7 +131,11 @@
     "approved": "موافق عليه",
     "revision_requested": "مطلوب تعديل",
     "rejected": "مرفوض",
-    "overdue": "متأخر"
+    "overdue": "متأخر",
+    "active": "نشط",
+    "suspended": "متوقف",
+    "completed": "مكتمل",
+    "terminated": "منهي"
   },
 
   "all": "الكل",

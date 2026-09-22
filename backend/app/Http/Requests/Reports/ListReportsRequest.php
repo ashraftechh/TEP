@@ -51,7 +51,17 @@ class ListReportsRequest extends FormRequest
             // Academic-supervisor branch only: drop the is_current default
             // and show every one of the supervisor's students' reports,
             // across current and historical assignments alike.
-            'include_history' => ['nullable', 'boolean'],
+            //
+            // Deliberately NOT validated as `boolean` — Laravel's boolean
+            // rule only accepts true, false, 0, 1, "0", "1", and rejects
+            // the literal string "true" that a JS boolean becomes once
+            // axios serializes it into a GET query string. That mismatch
+            // made every toggle-on request 422 before reaching the
+            // controller. `$request->boolean('include_history')` already
+            // interprets "true"/"1"/"on"/"yes" correctly regardless of
+            // what's validated here, so this rule only needs to confirm
+            // it's a plain scalar, not police its exact spelling.
+            'include_history' => ['nullable', 'string', 'in:0,1,true,false'],
             'q' => ['nullable', 'string', 'max:255'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];

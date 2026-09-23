@@ -25,6 +25,24 @@ return new class extends Migration
             $table->enum('status', ['active', 'suspended', 'completed', 'terminated'])
                 ->default('active');
             $table->boolean('is_current')->default(true);
+
+            // Enforces "at most one is_current = true row per student" at
+            // the database level — application code (see
+            // CreateTrainingAssignmentAction) also maintains this, but
+            // without this constraint two concurrent create requests for
+            // the same student can both pass the app-level check and both
+            // write is_current = true. MySQL has no direct "unique index
+            // with a WHERE clause" like Postgres, so this is the standard
+            // workaround: a stored generated column that is
+            // student_profile_id when the row is current and NULL
+            // otherwise, with a plain unique index on it. MySQL/MariaDB
+            // treat NULL as distinct in a unique index, so any number of
+            // non-current rows are fine — only a second is_current = true
+            // row for the same student collides.
+            $table->unsignedBigInteger('current_student_profile_id')
+                ->nullable()
+                ->storedAs('CASE WHEN is_current = 1 THEN student_profile_id ELSE NULL END');
+
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->unsignedTinyInteger('progress_percentage')->default(0);
@@ -40,6 +58,7 @@ return new class extends Migration
             $table->index('academic_supervisor_id');
             $table->index('company_id');
             $table->index(['student_profile_id', 'is_current']);
+            $table->unique('current_student_profile_id', 'training_assignments_one_current_per_student');
         });
     }
 

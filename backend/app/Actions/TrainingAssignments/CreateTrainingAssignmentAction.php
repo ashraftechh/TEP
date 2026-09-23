@@ -11,6 +11,7 @@ use App\Models\Application;
 use App\Models\Opportunity;
 use App\Models\TrainingAssignment;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,6 +33,28 @@ class CreateTrainingAssignmentAction
      */
     public function execute(Application $application, array $data, User $coordinator): TrainingAssignment
     {
+        try {
+            return $this->executeInTransaction($application, $data, $coordinator);
+        } catch (QueryException $e) {
+            // Defense in depth: the `training_assignments_one_current_per_student`
+            // unique index (see its migration) is the last line of defense
+            // against two is_current = true rows for the same student. The
+            // lockForUpdate() above closes that race for every case except
+            // a student's very first assignment ever (nothing to lock yet),
+            // so translate that one remaining edge case into the same
+            // user-facing exception the ordinary "already assigned" check
+            // throws, instead of letting a raw 1062 duplicate-key error
+            // surface as an unhandled 500.
+            if (str_contains($e->getMessage(), 'training_assignments_one_current_per_student')) {
+                throw StudentAlreadyAssignedException::forStudent($application->student_profile_id);
+            }
+
+            throw $e;
+        }
+    }
+
+    private function executeInTransaction(Application $application, array $data, User $coordinator): TrainingAssignment
+    {
         return DB::transaction(function () use ($application, $data, $coordinator): TrainingAssignment {
             // Lock the application row for the duration of the check +
             // create so two concurrent requests for the same application
@@ -47,6 +70,25 @@ class CreateTrainingAssignmentAction
             if ($exists) {
                 throw DuplicateTrainingAssignmentException::forApplication($locked->id);
             }
+
+            // Bug fix: lock every existing training_assignments row for this
+            // student for the duration of the check + is_current reset
+            // below. Previously only the `applications` row was locked, so
+            // two concurrent create requests for the same student (e.g. two
+            // different accepted applications approved back-to-back) could
+            // both pass the "no active assignment" check below before
+            // either committed, and both go on to write is_current = true —
+            // producing exactly the two-rows-both-current state this bug
+            // fix is closing. Locking here serializes any second concurrent
+            // request behind the first, so it re-reads a consistent view
+            // once the first commits. If the student has no existing rows
+            // yet (their very first assignment), there is nothing to lock —
+            // that remaining edge case is caught by the database's own
+            // uniqueness constraint further down and translated into the
+            // same StudentAlreadyAssignedException below.
+            TrainingAssignment::where('student_profile_id', $locked->student_profile_id)
+                ->lockForUpdate()
+                ->get();
 
             // Reject if the student already holds an active or suspended training assignment.
             $hasActiveAssignment = TrainingAssignment::where('student_profile_id', $locked->student_profile_id)

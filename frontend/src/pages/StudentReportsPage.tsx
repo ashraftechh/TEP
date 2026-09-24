@@ -55,6 +55,8 @@ import {
   File as FileIcon,
   Building2,
   GraduationCap,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -183,6 +185,8 @@ export const StudentReportsPage: React.FC = () => {
   const { reportTypes = [] } = useAppSelector((state) => state.lookup);
   const {
     reports = [],
+    pagination,
+    summary,
     isLoadingReports = false,
     isCreating = false,
     isUpdating = false,
@@ -202,6 +206,7 @@ export const StudentReportsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Multi-file attachment state
   const [attachments, setAttachments] = useState<AttachmentEntry[]>([]);
@@ -266,9 +271,24 @@ export const StudentReportsPage: React.FC = () => {
     return undefined;
   };
 
-  // Fetch initial data once on mount
+  // Fetch initial data once on mount, and again whenever the page or the
+  // (server-side) status/type filters change. The gating logic below
+  // (quota/sequence/final-report checks) reads from `summary`, which the
+  // backend computes across the student's whole report set regardless of
+  // pagination — it does not depend on which page is currently loaded.
+  const serverStatus = filterStatus === 'all' ? undefined : filterStatus;
+  const serverTypeId = filterType === 'all' ? undefined : parseInt(filterType, 10);
+
   useEffect(() => {
-    dispatch(fetchReports());
+    setCurrentPage(1);
+  }, [serverStatus, serverTypeId]);
+
+  useEffect(() => {
+    dispatch(fetchReports({ status: serverStatus, report_type_id: serverTypeId, page: currentPage }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, serverStatus, serverTypeId, currentPage]);
+
+  useEffect(() => {
     dispatch(fetchReportTypes());
     dispatch(fetchMyTrainingAssignment());
   }, [dispatch]);
@@ -487,8 +507,8 @@ export const StudentReportsPage: React.FC = () => {
   const hasExistingFinalReport = useMemo(() => {
     const finalType = reportTypes.find((t) => t.code === 'final');
     if (!finalType) return false;
-    return reports.some((r) => String(r.report_type_id) === String(finalType.id));
-  }, [reports, reportTypes]);
+    return (summary?.type_counts?.[String(finalType.id)] ?? 0) > 0;
+  }, [summary, reportTypes]);
 
   // Allowed report types for this assignment based on coordinator configuration
   const allowedReportTypes = useMemo(() => {
@@ -501,29 +521,33 @@ export const StudentReportsPage: React.FC = () => {
     });
   }, [reportTypes, myAssignment]);
 
-  // Quota helper for a given report type code
+  // Quota helper for a given report type code. Counts come from `summary`
+  // (server-computed across the student's whole report set) rather than
+  // the currently loaded page, so they stay correct regardless of
+  // pagination/filtering.
   const getTypeQuotaInfo = useCallback(
     (typeCode?: string) => {
       if (!typeCode) return { maxCount: null, count: 0, isReached: false };
       const config = myAssignment?.report_configuration?.[typeCode];
       const maxCount = config?.max_count;
-      const count = reports.filter((r) => r.report_type?.code === typeCode).length;
+      const type = reportTypes.find((t) => t.code === typeCode);
+      const count = type ? (summary?.type_counts?.[String(type.id)] ?? 0) : 0;
 
       if (maxCount === undefined || maxCount === null || maxCount <= 0) {
         return { maxCount: null, count, isReached: false };
       }
       return { maxCount, count, isReached: count >= maxCount };
     },
-    [myAssignment, reports]
+    [myAssignment, summary, reportTypes]
   );
 
   // Total required reports ceiling check
   const isTotalQuotaReached = useMemo(() => {
     const totalRequired = myAssignment?.required_reports_count;
     if (!totalRequired || totalRequired <= 0) return false;
-    const activeCount = reports.length;
+    const activeCount = summary?.total_count ?? reports.length;
     return activeCount >= totalRequired;
-  }, [myAssignment, reports]);
+  }, [myAssignment, summary, reports]);
 
   const isTypeEnabled = useCallback(
     (typeCode: string) => {
@@ -601,15 +625,17 @@ export const StudentReportsPage: React.FC = () => {
         return { isBlocked: false, prereqType: null as string | null, required: 0, approved: 0 };
       }
 
-      const nextNumber = reports.filter((r) => r.report_type?.code === typeCode).length + 1;
+      const type = reportTypes.find((t) => t.code === typeCode);
+      const nextNumber = (type ? (summary?.type_counts?.[String(type.id)] ?? 0) : 0) + 1;
       const threshold = getSequentialThreshold(typeCode, nextNumber);
       if (threshold === null) {
         return { isBlocked: false, prereqType: null as string | null, required: 0, approved: 0 };
       }
 
-      const approvedCount = reports.filter(
-        (r) => r.report_type?.code === prereqType && r.status === 'approved'
-      ).length;
+      const prereqTypeObj = reportTypes.find((t) => t.code === prereqType);
+      const approvedCount = prereqTypeObj
+        ? (summary?.approved_type_counts?.[String(prereqTypeObj.id)] ?? 0)
+        : 0;
 
       return {
         isBlocked: approvedCount < threshold,
@@ -618,7 +644,7 @@ export const StudentReportsPage: React.FC = () => {
         approved: approvedCount,
       };
     },
-    [getPrerequisiteType, getSequentialThreshold, reports]
+    [getPrerequisiteType, getSequentialThreshold, summary, reportTypes]
   );
 
   // Quick filtered reports for student
@@ -640,8 +666,8 @@ export const StudentReportsPage: React.FC = () => {
   // Training is considered complete once the final report has been approved.
   // Block all new report creation and submission at that point.
   const isTrainingCompleted = useMemo(
-    () => reports.some((r) => r.report_type?.code === 'final' && r.status === 'approved'),
-    [reports]
+    () => summary?.has_approved_final ?? reports.some((r) => r.report_type?.code === 'final' && r.status === 'approved'),
+    [summary, reports]
   );
 
   // Once a coordinator suspends/terminates/completes the assignment, the
@@ -666,18 +692,13 @@ export const StudentReportsPage: React.FC = () => {
       if (!typeId) return '1';
       const type = reportTypes.find((t) => String(t.id) === String(typeId));
       if (type?.code === 'final') return '1';
-      const takenNumbers = new Set(
-        reports
-          .filter((r) => String(r.report_type_id) === String(typeId))
-          .map((r) => r.report_number)
-      );
-      let candidate = 1;
-      while (takenNumbers.has(candidate)) {
-        candidate += 1;
-      }
-      return String(candidate);
+      // Best-effort default from the server-computed summary count for
+      // this type; the field stays editable and the server re-validates
+      // for duplicates/sequence on submit either way.
+      const count = summary?.type_counts?.[String(typeId)] ?? 0;
+      return String(count + 1);
     },
-    [reports, reportTypes]
+    [summary, reportTypes]
   );
 
   // ── File handling ──────────────────────────────────────────────────────────
@@ -921,6 +942,11 @@ export const StudentReportsPage: React.FC = () => {
       if (createReport.fulfilled.match(res)) {
         toast.success(t('toasts.createdSuccess'));
         setCreateDialogOpen(false);
+        // Re-sync the page + summary from the server: the new report may
+        // not belong on the currently loaded page, and the quota/sequence
+        // gating above reads from `summary`, which only the server can
+        // recompute correctly.
+        dispatch(fetchReports({ status: serverStatus, report_type_id: serverTypeId, page: currentPage }));
       } else {
         const serverErrs = res.payload?.errors;
         if (serverErrs && Object.keys(serverErrs).length > 0) {
@@ -1369,6 +1395,96 @@ export const StudentReportsPage: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.total > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-slate-800">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {isRTL ? (
+              <span>
+                عرض {pagination.from || 1} إلى {pagination.to || reports.length} من أصل{' '}
+                {pagination.total} تقرير
+              </span>
+            ) : (
+              <span>
+                Showing {pagination.from || 1} to {pagination.to || reports.length} of{' '}
+                {pagination.total} reports
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center flex-wrap justify-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1 || isLoadingReports}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              className="text-xs cursor-pointer h-8 px-2.5"
+            >
+              {isRTL ? (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5 me-1" />
+                  السابق
+                </>
+              ) : (
+                <>
+                  <ChevronLeft className="h-3.5 w-3.5 me-1" />
+                  Previous
+                </>
+              )}
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: pagination.last_page }, (_, i) => i + 1)
+                .filter((p) => {
+                  return p === 1 || p === pagination.last_page || Math.abs(p - currentPage) <= 1;
+                })
+                .map((pageNum, idx, arr) => {
+                  const prevPage = arr[idx - 1];
+                  const showEllipsis = prevPage && pageNum - prevPage > 1;
+                  return (
+                    <React.Fragment key={pageNum}>
+                      {showEllipsis && <span className="text-xs text-gray-400 px-1">…</span>}
+                      <Button
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        disabled={isLoadingReports}
+                        className={`h-8 w-8 p-0 text-xs cursor-pointer ${
+                          currentPage === pageNum
+                            ? 'bg-university-primary text-white border-university-primary'
+                            : ''
+                        }`}
+                      >
+                        {pageNum}
+                      </Button>
+                    </React.Fragment>
+                  );
+                })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= pagination.last_page || isLoadingReports}
+              onClick={() => setCurrentPage((prev) => Math.min(pagination.last_page, prev + 1))}
+              className="text-xs cursor-pointer h-8 px-2.5"
+            >
+              {isRTL ? (
+                <>
+                  التالي
+                  <ChevronLeft className="h-3.5 w-3.5 ms-1" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5 ms-1" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Create / Edit Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

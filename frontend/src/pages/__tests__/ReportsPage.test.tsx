@@ -96,6 +96,8 @@ const createTestStore = (initialReports: ReportItem[] = [mockReport]) => {
     preloadedState: {
       reports: {
         reports: initialReports,
+        pagination: null,
+        summary: null,
         isLoadingReports: false,
         fetchError: null,
         isCreating: false,

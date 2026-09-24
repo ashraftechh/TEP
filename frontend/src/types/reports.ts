@@ -53,6 +53,21 @@ export interface ReportReviewRecord {
   reviewer?: ReviewerInfo | null;
 }
 
+/**
+ * Student-side quota/sequence gating numbers, scoped the same way as the
+ * report list itself (role + include_history + explicit assignment) but
+ * computed BEFORE pagination/optional filters, so they stay accurate no
+ * matter which page or filter the list is currently showing. Keyed by
+ * report_type_id (as a string, since it comes back through JSON object
+ * keys). Only present for the student branch of GET /api/v1/reports.
+ */
+export interface ReportsSummary {
+  total_count: number;
+  type_counts: Record<string, number>;
+  approved_type_counts: Record<string, number>;
+  has_approved_final: boolean;
+}
+
 export interface ReportItem {
   id: number;
   training_assignment_id: number;

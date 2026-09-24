@@ -129,6 +129,8 @@ const createSupervisorStore = (initialReports: ReportItem[] = mockSupervisorRepo
     preloadedState: {
       reports: {
         reports: initialReports,
+        pagination: null,
+        summary: null,
         isLoadingReports: false,
         fetchError: null,
         isCreating: false,

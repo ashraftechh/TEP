@@ -1,25 +1,34 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '@/lib/api';
 import axios from 'axios';
+import type { PaginationMeta } from '@/store/slices/opportunitySlice';
 import type {
   ReportItem,
   CreateReportPayload,
   UpdateReportPayload,
   ReviewReportPayload,
   ReportReviewRecord,
+  ReportsSummary,
 } from '@/types/reports';
 
 export interface FetchReportsParams {
   status?: string;
   report_type_id?: number;
   student_id?: number;
+  company_id?: number;
+  opportunity_id?: number;
   q?: string;
   training_assignment_id?: number;
   include_history?: boolean;
+  page?: number;
+  per_page?: number;
 }
 
 export interface ReportState {
   reports: ReportItem[];
+  pagination: PaginationMeta | null;
+  /** Student-branch quota/sequence gating numbers — see ReportsSummary. */
+  summary: ReportsSummary | null;
 
   isLoadingReports: boolean;
   fetchError: string | null;
@@ -49,6 +58,8 @@ export interface ReportState {
 
 const initialState: ReportState = {
   reports: [],
+  pagination: null,
+  summary: null,
 
   isLoadingReports: false,
   fetchError: null,
@@ -115,15 +126,23 @@ export const uploadReportFile = createAsyncThunk<
  * TEP-674/TEP-682 — GET /api/v1/reports
  */
 export const fetchReports = createAsyncThunk<
-  ReportItem[],
+  { data: ReportItem[]; meta: PaginationMeta | null; summary: ReportsSummary | null },
   FetchReportsParams | void,
   { rejectValue: { message: string } }
 >('reports/fetchReports', async (params, { rejectWithValue }) => {
   try {
-    const response = await api.get<{ data: ReportItem[] }>('/reports', {
+    const response = await api.get<{
+      data: ReportItem[];
+      meta?: PaginationMeta & { summary?: ReportsSummary };
+    }>('/reports', {
       params: params || undefined,
     });
-    return response.data.data;
+    const meta = response.data.meta ?? null;
+    return {
+      data: response.data.data ?? [],
+      meta,
+      summary: meta?.summary ?? null,
+    };
   } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response) {
       return rejectWithValue({
@@ -295,7 +314,9 @@ export const reportSlice = createSlice({
       })
       .addCase(fetchReports.fulfilled, (state, action) => {
         state.isLoadingReports = false;
-        state.reports = action.payload;
+        state.reports = action.payload.data;
+        state.pagination = action.payload.meta;
+        state.summary = action.payload.summary;
       })
       .addCase(fetchReports.rejected, (state, action) => {
         state.isLoadingReports = false;

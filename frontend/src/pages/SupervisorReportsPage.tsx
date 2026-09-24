@@ -55,6 +55,8 @@ import {
   Calendar,
   Building2,
   Briefcase,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import HighlightText from '@/components/ui/HighlightText';
@@ -67,8 +69,15 @@ export const SupervisorReportsPage: React.FC = () => {
   const toast = useToast();
   const dispatch = useAppDispatch();
 
-  const { reports, isLoadingReports, isReviewing, reviewError, reportReviews, validationErrors } =
-    useAppSelector((state) => state.reports);
+  const {
+    reports,
+    pagination,
+    isLoadingReports,
+    isReviewing,
+    reviewError,
+    reportReviews,
+    validationErrors,
+  } = useAppSelector((state) => state.reports);
   const reportTypes = useAppSelector((state) => state.lookup?.reportTypes ?? EMPTY_REPORT_TYPES);
   const isLoadingReportTypes = useAppSelector((state) =>
     Boolean(
@@ -90,6 +99,7 @@ export const SupervisorReportsPage: React.FC = () => {
   // placement(s) — see the training_assignment_id/is_current default
   // scoping in ReportController::index().
   const [includeHistory, setIncludeHistory] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Review Dialog State
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
@@ -156,9 +166,38 @@ export const SupervisorReportsPage: React.FC = () => {
     return undefined;
   };
 
+  // Server-side filters: search, type and exact status values are sent as
+  // request params and drive real pagination — matching the "pending"
+  // pseudo-status (submitted + under_review together) and the
+  // company/opportunity/placement filters, which the backend can't
+  // express as a single param, stay client-side over whatever page is
+  // currently loaded (see filteredReports below — same trade-off
+  // TrainingAssignmentsPage already makes for its own company/opportunity
+  // filters).
+  const isPendingStatus = selectedStatus === 'pending';
+  const serverStatus = selectedStatus === 'all' || isPendingStatus ? undefined : selectedStatus;
+  const serverTypeId = selectedType === 'all' ? undefined : parseInt(selectedType, 10);
+
+  // Reset to page 1 whenever a server-side filter changes.
   useEffect(() => {
-    dispatch(fetchReports(includeHistory ? { include_history: true } : undefined));
-  }, [dispatch, includeHistory]);
+    setCurrentPage(1);
+  }, [serverStatus, serverTypeId, includeHistory]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      dispatch(
+        fetchReports({
+          status: serverStatus,
+          report_type_id: serverTypeId,
+          q: searchQuery.trim() || undefined,
+          include_history: includeHistory || undefined,
+          page: currentPage,
+        })
+      );
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, serverStatus, serverTypeId, searchQuery, includeHistory, currentPage]);
 
   useEffect(() => {
     if (reportTypes.length === 0 && !isLoadingReportTypes) {
@@ -386,16 +425,19 @@ export const SupervisorReportsPage: React.FC = () => {
     }
   };
 
-  // Stats calculation
+  // Stats calculation. `total` comes from the server's true count across
+  // every page; the pending/approved/revision breakdown reflects only the
+  // currently loaded page — the same trade-off TrainingAssignmentsPage
+  // makes for its own secondary stats.
   const stats = useMemo(() => {
-    const total = reports.length;
+    const total = pagination?.total ?? reports.length;
     const pending = reports.filter(
       (r) => r.status === 'submitted' || r.status === 'under_review'
     ).length;
     const approved = reports.filter((r) => r.status === 'approved').length;
     const revision = reports.filter((r) => r.status === 'revision_requested').length;
     return { total, pending, approved, revision };
-  }, [reports]);
+  }, [reports, pagination]);
 
   // Unique companies and opportunities derived from reports
   const companies = useMemo(() => {
@@ -666,7 +708,10 @@ export const SupervisorReportsPage: React.FC = () => {
               />
               <Input
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder={t('supervisor.filters.searchPlaceholder', {
                   defaultValue: 'Search by report title, student name, or ID...',
                 })}
@@ -1014,6 +1059,96 @@ export const SupervisorReportsPage: React.FC = () => {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {pagination && pagination.total > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-slate-800">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {isRTL ? (
+              <span>
+                عرض {pagination.from || 1} إلى {pagination.to || reports.length} من أصل{' '}
+                {pagination.total} تقرير
+              </span>
+            ) : (
+              <span>
+                Showing {pagination.from || 1} to {pagination.to || reports.length} of{' '}
+                {pagination.total} reports
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center flex-wrap justify-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1 || isLoadingReports}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              className="text-xs cursor-pointer h-8 px-2.5"
+            >
+              {isRTL ? (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5 me-1" />
+                  السابق
+                </>
+              ) : (
+                <>
+                  <ChevronLeft className="h-3.5 w-3.5 me-1" />
+                  Previous
+                </>
+              )}
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: pagination.last_page }, (_, i) => i + 1)
+                .filter((p) => {
+                  return p === 1 || p === pagination.last_page || Math.abs(p - currentPage) <= 1;
+                })
+                .map((pageNum, idx, arr) => {
+                  const prevPage = arr[idx - 1];
+                  const showEllipsis = prevPage && pageNum - prevPage > 1;
+                  return (
+                    <React.Fragment key={pageNum}>
+                      {showEllipsis && <span className="text-xs text-gray-400 px-1">…</span>}
+                      <Button
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        disabled={isLoadingReports}
+                        className={`h-8 w-8 p-0 text-xs cursor-pointer ${
+                          currentPage === pageNum
+                            ? 'bg-university-primary text-white border-university-primary'
+                            : ''
+                        }`}
+                      >
+                        {pageNum}
+                      </Button>
+                    </React.Fragment>
+                  );
+                })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= pagination.last_page || isLoadingReports}
+              onClick={() => setCurrentPage((prev) => Math.min(pagination.last_page, prev + 1))}
+              className="text-xs cursor-pointer h-8 px-2.5"
+            >
+              {isRTL ? (
+                <>
+                  التالي
+                  <ChevronLeft className="h-3.5 w-3.5 ms-1" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5 ms-1" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       )}
 

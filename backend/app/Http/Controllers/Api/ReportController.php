@@ -32,6 +32,7 @@ use App\Models\ReportType;
 use App\Models\TrainingAssignment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ReportController extends Controller
 {
@@ -58,7 +59,7 @@ class ReportController extends Controller
      * supervisor branch only, `include_history=1` instead drops the
      * is_current restriction entirely to browse everything.
      */
-    public function index(ListReportsRequest $request): JsonResponse
+    public function index(ListReportsRequest $request): AnonymousResourceCollection|JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -67,8 +68,9 @@ class ReportController extends Controller
             ? (int) $request->input('training_assignment_id')
             : null;
         $includeHistory = $request->boolean('include_history');
+        $isReviewerView = $user->hasPermission('reports.review') && ! $user->hasRole('student');
 
-        if ($user->hasPermission('reports.review') && ! $user->hasRole('student')) {
+        if ($isReviewerView) {
             $query = Report::query()
                 ->whereIn('status', Report::SUBMITTED_STATUSES)
                 ->whereHas('trainingAssignment', function ($q) use ($user, $explicitAssignmentId, $includeHistory) {
@@ -99,6 +101,35 @@ class ReportController extends Controller
             }
         } else {
             return ReportResource::collection(collect())->response();
+        }
+
+        // Snapshot the role/history-scoped query — BEFORE the optional
+        // list filters below (status/type/company/opportunity/q) — so the
+        // student-side quota/sequence gating numbers below stay accurate
+        // no matter what the caller is currently filtering or paginating
+        // through. Only the student branch needs this: it's the one
+        // branch whose numbers feed report-creation gating rather than
+        // just a display stat.
+        $studentSummary = null;
+        if (! $isReviewerView && $user->studentProfile !== null) {
+            $summaryScope = clone $query;
+
+            $studentSummary = [
+                'total_count' => (clone $summaryScope)->count(),
+                'type_counts' => (clone $summaryScope)
+                    ->selectRaw('report_type_id, count(*) as aggregate')
+                    ->groupBy('report_type_id')
+                    ->pluck('aggregate', 'report_type_id'),
+                'approved_type_counts' => (clone $summaryScope)
+                    ->where('status', 'approved')
+                    ->selectRaw('report_type_id, count(*) as aggregate')
+                    ->groupBy('report_type_id')
+                    ->pluck('aggregate', 'report_type_id'),
+                'has_approved_final' => (clone $summaryScope)
+                    ->where('status', 'approved')
+                    ->whereHas('reportType', fn ($q) => $q->where('code', 'final'))
+                    ->exists(),
+            ];
         }
 
         if ($request->filled('status')) {
@@ -159,7 +190,9 @@ class ReportController extends Controller
         // sequence order rather than raw insertion recency — otherwise a
         // supervisor could see report #3 of a type above report #1 simply
         // because it was submitted more recently.
-        if ($user->hasPermission('reports.review') && ! $user->hasRole('student')) {
+        $perPage = (int) $request->input('per_page', 15);
+
+        if ($isReviewerView) {
             $reports = $query
                 ->orderBy('training_assignment_id')
                 ->orderBy('report_type_id')
@@ -167,12 +200,18 @@ class ReportController extends Controller
                 ->orderByRaw('due_at IS NULL')
                 ->orderBy('due_at')
                 ->orderBy('id')
-                ->get();
+                ->paginate($perPage);
         } else {
-            $reports = $query->orderBy('id', 'desc')->get();
+            $reports = $query->orderBy('id', 'desc')->paginate($perPage);
         }
 
-        return ReportResource::collection($reports)->response();
+        $collection = ReportResource::collection($reports);
+
+        if ($studentSummary !== null) {
+            $collection = $collection->additional(['meta' => ['summary' => $studentSummary]]);
+        }
+
+        return $collection->response();
     }
 
     /**

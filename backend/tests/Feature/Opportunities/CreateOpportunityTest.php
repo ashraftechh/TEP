@@ -163,7 +163,7 @@ class CreateOpportunityTest extends TestCase
             'salary' => 3000.00,
             'start_date' => '2026-10-01',
             'end_date' => '2027-04-01',
-            'application_deadline' => '2026-09-20',
+            'application_deadline' => now()->addMonth()->toDateString(),
             'major_ids' => [$this->major1->id, $this->major2->id],
             'skill_ids' => [$this->skill1->id, $this->skill2->id],
             'requirements_ar' => [

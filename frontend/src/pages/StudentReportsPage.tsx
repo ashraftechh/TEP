@@ -279,13 +279,21 @@ export const StudentReportsPage: React.FC = () => {
   const serverStatus = filterStatus === 'all' ? undefined : filterStatus;
   const serverTypeId = filterType === 'all' ? undefined : parseInt(filterType, 10);
 
-  useEffect(() => {
+  // Reset to page 1 when a server-side filter changes. Adjusted during
+  // render (React's recommended pattern for resetting state in response
+  // to another piece of state changing) rather than in an effect, so it
+  // doesn't cause an extra render pass.
+  const filterKey = `${serverStatus ?? ''}|${serverTypeId ?? ''}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
     setCurrentPage(1);
-  }, [serverStatus, serverTypeId]);
+  }
 
   useEffect(() => {
-    dispatch(fetchReports({ status: serverStatus, report_type_id: serverTypeId, page: currentPage }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    dispatch(
+      fetchReports({ status: serverStatus, report_type_id: serverTypeId, page: currentPage })
+    );
   }, [dispatch, serverStatus, serverTypeId, currentPage]);
 
   useEffect(() => {
@@ -666,7 +674,9 @@ export const StudentReportsPage: React.FC = () => {
   // Training is considered complete once the final report has been approved.
   // Block all new report creation and submission at that point.
   const isTrainingCompleted = useMemo(
-    () => summary?.has_approved_final ?? reports.some((r) => r.report_type?.code === 'final' && r.status === 'approved'),
+    () =>
+      summary?.has_approved_final ??
+      reports.some((r) => r.report_type?.code === 'final' && r.status === 'approved'),
     [summary, reports]
   );
 
@@ -685,7 +695,11 @@ export const StudentReportsPage: React.FC = () => {
         defaultValue: myAssignment.status,
       }),
     });
-  }, [myAssignment?.status, t]);
+    // `t`'s identity isn't a meaningful dependency here; the array below
+    // matches the React Compiler's own inferred dependency set so manual
+    // memoization isn't discarded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myAssignment?.status]);
 
   const getNextReportNumber = useCallback(
     (typeId?: string | number): string => {
@@ -946,7 +960,9 @@ export const StudentReportsPage: React.FC = () => {
         // not belong on the currently loaded page, and the quota/sequence
         // gating above reads from `summary`, which only the server can
         // recompute correctly.
-        dispatch(fetchReports({ status: serverStatus, report_type_id: serverTypeId, page: currentPage }));
+        dispatch(
+          fetchReports({ status: serverStatus, report_type_id: serverTypeId, page: currentPage })
+        );
       } else {
         const serverErrs = res.payload?.errors;
         if (serverErrs && Object.keys(serverErrs).length > 0) {

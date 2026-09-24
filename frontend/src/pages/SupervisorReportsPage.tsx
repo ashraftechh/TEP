@@ -178,10 +178,16 @@ export const SupervisorReportsPage: React.FC = () => {
   const serverStatus = selectedStatus === 'all' || isPendingStatus ? undefined : selectedStatus;
   const serverTypeId = selectedType === 'all' ? undefined : parseInt(selectedType, 10);
 
-  // Reset to page 1 whenever a server-side filter changes.
-  useEffect(() => {
+  // Reset to page 1 when a server-side filter changes. Adjusted during
+  // render (React's recommended pattern for resetting state in response
+  // to another piece of state changing) rather than in an effect, so it
+  // doesn't cause an extra render pass.
+  const filterKey = `${serverStatus ?? ''}|${serverTypeId ?? ''}|${includeHistory ? 1 : 0}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
     setCurrentPage(1);
-  }, [serverStatus, serverTypeId, includeHistory]);
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -196,7 +202,6 @@ export const SupervisorReportsPage: React.FC = () => {
       );
     }, 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, serverStatus, serverTypeId, searchQuery, includeHistory, currentPage]);
 
   useEffect(() => {
